@@ -238,6 +238,42 @@ document.addEventListener('keydown', e => {
 - Master Accent 1개 고정 → 전체 덱에서 변경 금지
 - 10% 초과 위험 요소(라벨·구조적 텍스트)는 `#94A3B8` 중립색으로 격하
 
+**이미지 패널 그라데이션 블렌드 (Photo Panel Gradient Blend)**
+
+이미지가 전체 높이 또는 너비로 인접 패널과 함께 사용될 때, 이미지 위에 인접 패널의 배경색으로 페이드되는 그라데이션 오버레이를 적용한다.  
+→ 이미지가 인접 패널로 자연스럽게 녹아드는 효과. 경계선 없이 레이아웃이 하나로 연결되어 보인다.
+
+**방향 규칙**:
+| 이미지 위치 | 그라데이션 방향 | 패턴 |
+|------------|--------------|------|
+| 오른쪽 | `to right` | `linear-gradient(to right, [왼쪽패널색] 0%, transparent 50%)` |
+| 왼쪽 | `to left` | `linear-gradient(to left, [오른쪽패널색] 0%, transparent 50%)` |
+| 아래쪽 | `to bottom` | `linear-gradient(to bottom, [위패널색] 0%, transparent 50%)` |
+| 위쪽 | `to top` | `linear-gradient(to top, [아래패널색] 0%, transparent 50%)` |
+
+**구현 패턴**:
+```html
+<div style="position:relative; overflow:hidden;">
+  <img style="width:100%; height:100%; object-fit:cover;">
+  <!-- 인접 패널 색상으로 페이드 — pointer-events:none 필수 -->
+  <div style="position:absolute; inset:0;
+    background:linear-gradient(to right, [인접패널배경색] 0%, transparent 50%);
+    pointer-events:none;"></div>
+</div>
+```
+
+**보더라인 처리**: 그라데이션 블렌드를 사용하는 경우 인접 패널 경계의 `border` 또는 `border-left/right/top/bottom`을 반드시 제거한다. 보더가 남아 있으면 그라데이션 효과가 무너진다.
+
+**페이드 범위 기준**:
+- `30%` — 날카로운 블렌드 (강한 대비 원할 때)
+- `50%` — 자연스러운 블렌드 (기본값 권장)
+- `65%` — 부드러운 블렌드 (이미지를 많이 살리고 싶을 때)
+
+**생성 전 자기 체크에 추가**:
+- [ ] 이미지가 인접 패널과 경계 없이 자연스럽게 연결되는가?
+
+---
+
 **전체화면 배경 이미지 — z-index 3레이어 구조 (필수)**
 
 z-index 구조가 없으면 오버레이가 콘텐츠를 덮어 텍스트가 사라진다.
