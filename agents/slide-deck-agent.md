@@ -262,7 +262,27 @@ document.addEventListener('keydown', e => {
 </div>
 ```
 
-**보더라인 처리**: 그라데이션 블렌드를 사용하는 경우 인접 패널 경계의 `border` 또는 `border-left/right/top/bottom`을 반드시 제거한다. 보더가 남아 있으면 그라데이션 효과가 무너진다.
+**보더라인 처리**: 그라데이션 블렌드를 사용하는 경우 인접 패널 경계의 `border` 전체(`border-top/right/bottom/left` 모두)를 제거한다. 단축속성(`border:`)으로 설정된 경우도 마찬가지. 보더가 남아 있으면 그라데이션 효과가 무너진다.
+
+**120% 할당 규칙 (Gradient Axis Extension)**:  
+그라데이션 방향축 기준으로 포토 패널의 크기를 원래 할당량의 120%로 늘린다.  
+→ 그라데이션이 사용할 "블리드 존"을 확보해 이미지 콘텐츠 손실을 방지.
+```
+flex 사용 시: flex 값 × 1.2  (예: flex:2 → flex:2.4)
+고정 width 사용 시: width × 1.2
+```
+또한 `margin-left: -8px` (또는 그라데이션 방향 반대쪽 margin)을 추가해  
+flex 경계 렌더링 seam을 그라데이션이 덮도록 약간 오버랩시킨다.
+
+```html
+<!-- 120% 할당 + seam 제거 패턴 (이미지가 오른쪽인 경우) -->
+<div style="flex:2.4; overflow:hidden; position:relative; margin-left:-8px;">
+  <img style="width:100%; height:100%; object-fit:cover;">
+  <div style="position:absolute; inset:0;
+    background:linear-gradient(to right, [인접패널색] 0%, transparent 50%);
+    pointer-events:none;"></div>
+</div>
+```
 
 **페이드 범위 기준**:
 - `30%` — 날카로운 블렌드 (강한 대비 원할 때)
