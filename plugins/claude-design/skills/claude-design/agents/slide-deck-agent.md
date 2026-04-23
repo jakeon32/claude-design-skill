@@ -16,6 +16,44 @@ description: "Claude Design — Slide Deck 모드 전용 에이전트. 발표자
 ② 슬라이드 수 목표는? 스피커 노트 필요한가요? (ON/OFF)
 ```
 
+## Step 0: 콘텐츠 재편성 (원본이 있을 때 — 선택 단계)
+
+사용자가 기존 문서·개요·텍스트를 입력하면, 슬라이드 구성 전에 **콘텐츠 재편성**을 먼저 수행한다.
+
+### 재편성 원칙
+
+```
+한 슬라이드 = 핵심 메시지 1개
+```
+
+| 진단 신호 | 처방 |
+|----------|------|
+| 한 페이지에 3개 이상의 주제 | 슬라이드 분리 |
+| 글머리 기호 5개 이상 | 상위 3개만 남기고 나머지는 스피커 노트로 이동 |
+| 설명 문장이 2줄 이상 | 핵심 키워드(5~10자)만 추출, 문장 전체는 스피커 노트 |
+| 데이터와 배경 설명이 혼재 | 배경(스토리) 슬라이드 / 데이터 슬라이드 분리 |
+| 결론이 마지막에 묻혀 있음 | 결론을 앞으로 이동 (BLUF 구조) |
+
+### 재편성 출력 형식
+
+```markdown
+## 재편성 제안
+
+**원본**: "시장 규모는 2024년 기준 5조원이며, 연평균 12% 성장 중. 경쟁사 대비 우리 제품은 가격이 30% 저렴하고, 고객 만족도 NPS 72..."
+
+**재편성**:
+- 슬라이드 A (Centered Statement): **$50B TAM · 12% CAGR**
+- 슬라이드 B (Photo Split): 경쟁 포지셔닝 — 30% 비용 절감
+- 슬라이드 C (Key Metrics): NPS 72 / 주요 지표
+- 스피커 노트: 세부 수치·맥락 이동
+
+이대로 구성할까요?
+```
+
+재편성 후 사용자 확인을 받고 Step 1로 진행한다.
+
+---
+
 ## Step 1: 슬라이드 구성안 (확인 후 진행)
 
 **사용 가능한 레이아웃 유형** (Figma slide_sample 실측 기반):
@@ -349,15 +387,35 @@ Body     : 가장 작게        (예: 24px)
 
 | 유형 | Visual | Text | 주요 팁 |
 |------|--------|------|---------|
-| Title/Cover | 70~80% | 20~30% | 히어로 이미지 + 최소 텍스트 |
+| Title/Cover | 80~90% | 10~20% | 이미지는 배경 전용 · 텍스트 요소 최대 2개 |
 | Content/Story | 65~75% | 20~25% | 이미지 중심, 키워드만 |
 | Data/Chart | 70~80% | 15~25% | 그래프 크게, 설명 최소화 |
 | Quote | 60~70% | 25~30% | 큰 따옴표 + 배경 이미지 |
 | Closing/CTA | 75%+ | 15% 이하 | 강렬한 비주얼 + 명확한 CTA |
 | Agenda | 40~50% | 40~50% | 명확한 계층 구조 |
 
+**Cover/Title 슬라이드 전용 규칙 (필수)**
+
+```
+허용 텍스트 요소: 최대 2개
+  ① 덱 제목 (Title) — 필수
+  ② 서브타이틀 또는 날짜/발표자 중 1개 — 선택
+
+금지:
+  × 회사명 + 제목 + 서브타이틀 + 날짜 + 발표자 동시 나열
+  × 로고 + 배경 설명 텍스트 병행
+  × 3개 이상의 독립 텍스트 블록
+
+이미지 역할: 배경(background) 전용
+  → 전체화면 이미지 위에 다크 오버레이(opacity 0.5~0.7)
+  → 텍스트는 이미지 위에 중앙 또는 하단 1/3 배치
+  → 이미지 자체가 정보를 전달하지 않도록
+```
+
 **생성 전 자기 체크**
 - [ ] 슬라이드당 핵심 메시지 1개인가?
+- [ ] Cover 슬라이드의 텍스트 요소가 2개 이하인가?
+- [ ] Cover 이미지가 배경 역할(정보 없음)로만 쓰였는가?
 - [ ] Visual이 60% 이상인가?
 - [ ] 텍스트가 35%를 넘지 않는가?
 - [ ] 가장자리 여백이 충분한가?
@@ -409,5 +467,92 @@ d:\tmp\slides-v1.html, slides-v2.html 각각 저장
 |------|------|
 | "PDF로" | `window.print()` 안내 + 각 슬라이드 분리 HTML |
 | "Figma로" | Figma Console MCP로 프레임 생성 |
-| "PPTX로" | 슬라이드별 콘텐츠 구조 + Canva/PowerPoint 붙여넣기 가이드 |
+| "PPTX로" | **Step 5 실행** → python-pptx로 실제 .pptx 파일 생성 |
 | "React로" | 컴포넌트 코드 핸드오프 |
+
+---
+
+## Step 5: PPTX 변환 (선택 단계 — "PPTX로" 요청 시)
+
+HTML 슬라이드가 완성되면 `tools/pptx_export.py` + `tools/pptx_utils.py`로 실제 PowerPoint 파일을 생성한다.
+
+### 구조
+
+```
+tools/
+  pptx_utils.py    — PptxBuilder 클래스, DesignSystem, build_pptx() 진입점
+  pptx_export.py   — 슬라이드 빌더 함수들, build() 진입점
+```
+
+### 신규 프레젠테이션 작성 패턴
+
+```python
+# my_slides.py
+from pptx.util import Inches, Pt
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx_utils import DesignSystem, PptxBuilder, build_pptx
+from pptx.dml.color import RGBColor
+
+# 1. 디자인 시스템 정의 (기본값 override)
+ds = DesignSystem(
+    colors={
+        **DesignSystem().colors,          # 기본 팔레트 유지
+        'v': RGBColor(0x00, 0x7A, 0xFF),  # accent 색상만 교체
+    }
+)
+
+# 2. 슬라이드 빌더 함수 정의 (시그니처: prs, b)
+def cover(prs, b: PptxBuilder):
+    sl = b.blank(prs)
+    b.set_bg(sl, b.C['fg'])
+    b.add_mixed(sl, Inches(1), Inches(2), Inches(8), Inches(1.5),
+        [[('제목', b.C['w'])]], size=48, align=PP_ALIGN.CENTER)
+    b.pn(sl, 1, 3, dark_bg=True)
+
+def content(prs, b: PptxBuilder):
+    sl = b.blank(prs)
+    b.set_bg(sl, b.C['bg'])
+    CW = b.W - 2 * b.M
+    y = b.badge(sl, b.M, Inches(0.5), 'Chapter 01', b.C['v'])
+    b.add_txt(sl, b.M, y, CW, Inches(0.5), '내용', size=24, bold=True)
+    b.pn(sl, 2, 3)
+
+# 3. 빌드
+build_pptx([cover, content], output='D:/tmp/output.pptx', ds=ds)
+```
+
+### HTML → PPTX 변환 체크리스트
+
+각 슬라이드를 변환할 때 `references/pptx-alignment-patterns.md`의 규칙 적용:
+
+- [ ] oval/shape과 나란한 textbox에 `anchor=MSO_ANCHOR.MIDDLE` 적용
+- [ ] 동일 Y 배치 시 textbox 높이 = shape 높이로 맞춤
+- [ ] pill/badge textbox에 `anchor=MSO_ANCHOR.MIDDLE` 적용
+- [ ] 좌측 컬러 바 두께 최소 `Inches(0.05)` 이상
+- [ ] emoji 아이콘 textbox에 `font='Segoe UI Emoji'` 명시
+
+### 검증 파이프라인
+
+```bash
+# 1. PPTX 생성
+python tools/pptx_export.py         # D:/tmp/slides_v4.pptx 생성
+
+# 2. HTML 스크린샷 캡처
+python tools/capture_compare.py
+
+# 3. PPTX → PNG 변환 (PowerShell)
+# (PowerShell에서 실행)
+$ppt = New-Object -ComObject PowerPoint.Application
+$ppt.Visible = 1
+$prs = $ppt.Presentations.Open("D:\tmp\slides_v4.pptx")
+$prs.SaveAs("D:\tmp\pptx_png", 17)   # 17 = ppSaveAsPNG
+$prs.Close(); $ppt.Quit()
+
+# 4. 비교 이미지 생성
+python tools/make_compare.py
+```
+
+### 보정값 참조
+
+- 상세 패턴: `references/pptx-alignment-patterns.md`
+- 핵심 요약: `references/pptx-alignment-patterns.md#핵심-원칙`

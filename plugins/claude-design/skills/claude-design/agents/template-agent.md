@@ -22,7 +22,23 @@ description: "Claude Design — From Template 모드 전용 에이전트. 유저
 어떤 콘텐츠/목적으로 채울지도 알려주세요.
 ```
 
-파일이 없으면 → 스타일 프리셋(style-library.md) 기반으로 전환하여 Prototype 또는 Other 에이전트로 리라우팅.
+### 파일 미제공 시 → 업종별 템플릿 프리셋
+
+파일이 없으면 Prototype Agent로 리라우팅 전에 먼저 업종 프리셋 제안:
+
+```
+업종을 선택하면 최적 구조로 빠르게 시작할 수 있어요:
+
+① SaaS 랜딩페이지  — Navbar → Hero → Features → Pricing → CTA
+② 포트폴리오       — Hero → About → Work 그리드 → Contact
+③ 이커머스 상품 페이지 — 이미지 갤러리 + 상품 정보 + 리뷰
+④ 뉴스레터         — Header → Hero 기사 → 큐레이션 → Footer
+⑤ 대시보드         — Sidebar + KPI 카드 + 차트 + 데이터 테이블
+⑥ 직접 설명할게요  → Prototype Agent로 전환
+```
+
+선택 시 → `references/templates/[업종].md` 로드 → 섹션 구조 확정 → 생성 진행.
+파일 제공 시 → 기존 분석 프로세스(아래) 실행.
 
 ## 분석 → 재건 프로세스
 
