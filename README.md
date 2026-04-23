@@ -1,0 +1,258 @@
+# Claude Design Skill
+
+Claude Code용 디자인 에이전트 플러그인. 자연어 요청만으로 UI 프로토타입, 슬라이드 덱, 템플릿 재건, PowerPoint 파일까지 생성한다.
+
+---
+
+## 목적
+
+Claude Code는 기본적으로 코드를 잘 쓰지만, **디자인 산출물**을 체계적으로 만들려면 별도의 워크플로우가 필요하다.
+
+이 스킬은 다음 흐름을 자동화한다:
+
+```
+디자인 시스템 확정 → 스타일 선택(73종) → 모드 분기 → HTML 생성 → 반복 수정 → PPTX 내보내기
+```
+
+Anthropic의 [claude.ai/design](https://claude.ai/design) 워크플로우를 Claude Code CLI/IDE 환경에서 그대로 재현하는 것이 목표다.
+
+---
+
+## 주요 기능
+
+### 1. 4가지 출력 모드
+
+| 모드 | 설명 | 주요 산출물 |
+|------|------|------------|
+| **① Prototype** | UI 목업, 대시보드, 랜딩페이지, 원페이저 | Self-contained HTML |
+| **② Slide Deck** | 발표자료, 피치덱, 투자자 보고서 | HTML 슬라이드 + 선택적 PPTX |
+| **③ From Template** | 기존 파일(HTML/Figma/스크린샷)의 구조를 추출해 재건 | HTML |
+| **④ Other** | 소셜 그래픽, 배너, 이메일 템플릿 등 | HTML |
+
+### 2. 73종 디자인 스타일 라이브러리
+
+`"미니멀 다크 스타일로"`, `"네오 브루탈리즘으로"` 등 자연어 지정 즉시 적용.  
+스타일 미지정 시 요청 내용을 분석해 자동으로 Top 3 추천.
+
+**지원 카테고리 (일부)**
+
+| Light | Dark |
+|-------|------|
+| Bauhaus, Swiss Style, Luxury Editorial, Art Deco | Minimalist Dark, Terminal CLI, Cyberpunk, Vaporwave |
+| Neo Brutalism, Flat Design, Material You, Claymorphism | Neural Noir, Kinetic Typography, Bold Editorial |
+| Botanical, Organic, Sketch, Neumorphism | Web3/DeFi, Neon Velocity, Cinematic Noir |
+
+→ 전체 목록: [`references/styles/index.md`](plugins/claude-design/skills/claude-design/references/styles/index.md)
+
+### 3. PPTX 변환 파이프라인
+
+HTML 슬라이드 완성 후 실제 `.pptx` 파일로 변환:
+
+```
+HTML 슬라이드 → python-pptx → PPTX → PowerPoint COM → PNG → 비교 이미지
+```
+
+- `pptx_utils.py` — `DesignSystem` + `PptxBuilder` 범용 라이브러리
+- `pptx_export.py` — 슬라이드 빌더 + `build(ds=None)` 진입점
+- `capture_compare.py` / `make_compare.py` — 시각 검증 도구
+
+### 4. 한국어 타이포그래피 최적화
+
+모든 산출물에 자동 적용:
+- Pretendard 기본 폰트
+- 행간·자간 한국어 기준값
+- 단어 단위 줄바꿈 (`word-break: keep-all`)
+
+---
+
+## 에이전트 구조
+
+11개 에이전트가 역할을 분담하며 순차·병렬 실행한다.
+
+```
+[MASTER — claude-design]
+    │
+    ├─ 1. DesignSystemManager   ← 항상 먼저 (DESIGN_SYSTEM 확정 + 스타일 추천)
+    ├─ 2. ProjectPlanner        ← 모드 분기 + 소스 수집
+    │
+    ├─ 3. Generator (모드별 1개 실행)
+    │       ├─ prototype-agent      UI 목업 / 원페이저
+    │       ├─ slide-deck-agent     슬라이드 덱 / PPTX
+    │       ├─ template-agent       파일 기반 재건 / 업종 프리셋
+    │       └─ other-agent          기타 그래픽
+    │
+    ├─ 4. 선택적 전문 에이전트 (필요 시 병렬)
+    │       ├─ copywriting-agent    카피/헤드라인/CTA
+    │       ├─ animation-agent      인터랙션/hover/스크롤 애니메이션
+    │       ├─ responsive-agent     모바일/반응형
+    │       └─ accessibility-agent  접근성 QA
+    │
+    ├─ 5. VisualRefiner         ← 반복 수정 + 자동 QA
+    └─ 6. Handoff               ← Claude Code 핸드오프
+```
+
+> **규칙**: DESIGN\_SYSTEM이 확정되지 않으면 Generator 실행 불가.
+
+---
+
+## 프로젝트 구조
+
+```
+claude-design-skill/
+├── CLAUDE.md                       설치·사용법 요약
+├── .gitignore
+├── docs/
+│   └── model-str.md                AI 인플루언서 프롬프트 엔지니어링 문서
+└── plugins/
+    └── claude-design/
+        ├── package.json
+        └── skills/claude-design/
+            ├── SKILL.md            마스터 스킬 진입점
+            ├── agents/             에이전트 11개
+            │   ├── design-system-manager.md
+            │   ├── project-planner.md
+            │   ├── prototype-agent.md
+            │   ├── slide-deck-agent.md     ← PPTX Step 5 포함
+            │   ├── template-agent.md
+            │   ├── visual-refiner.md
+            │   ├── copywriting-agent.md
+            │   ├── animation-agent.md
+            │   ├── responsive-agent.md
+            │   ├── accessibility-agent.md
+            │   └── other-agent.md
+            ├── references/
+            │   ├── korean-typography.md    한국어 타이포그래피 규칙
+            │   ├── pptx-alignment-patterns.md  python-pptx 정렬 보정값
+            │   ├── style-recommender.md    스타일 자동 추천 로직
+            │   ├── styles/
+            │   │   ├── index.md
+            │   │   ├── designprompts/      31종 스타일 프롬프트
+            │   │   └── superdesign/        42종 슈퍼디자인 스타일
+            │   └── templates/              업종별 구조 프리셋 5종
+            │       ├── saas-landing.md
+            │       ├── dashboard.md
+            │       ├── ecommerce-pdp.md
+            │       ├── portfolio.md
+            │       └── newsletter.md
+            └── tools/
+                ├── pptx_utils.py           PptxBuilder + DesignSystem (범용)
+                ├── pptx_export.py          AI 인플루언서 슬라이드 빌더
+                ├── capture_compare.py      Playwright HTML 스크린샷
+                ├── make_compare.py         HTML vs PPTX 비교 이미지
+                └── requirements.txt
+```
+
+---
+
+## 설치
+
+### 전제 조건
+
+| 항목 | 설명 |
+|------|------|
+| Claude Code | CLI / VSCode Extension / Desktop App |
+| Python 3.10+ | PPTX 도구 사용 시 |
+| Pretendard 폰트 | 한국어 UI 출력 품질 (`C:\Windows\Fonts\` 설치) |
+| Microsoft PowerPoint | PPTX → PNG 변환 시 (Windows 전용) |
+
+### 플러그인 등록
+
+Claude Code 설정 파일(`~/.claude/settings.json`)에 플러그인 경로 추가:
+
+```json
+{
+  "plugins": [
+    "D:/claude/claude-design-skill/plugins/claude-design"
+  ]
+}
+```
+
+### Python 패키지 설치
+
+```bash
+pip install -r plugins/claude-design/skills/claude-design/tools/requirements.txt
+playwright install chromium
+```
+
+---
+
+## 사용법
+
+### 자연어 트리거
+
+Claude Code 채팅에서 아래와 같이 입력하면 스킬이 자동 실행된다.
+
+```
+"랜딩페이지 만들어줘"
+"피치덱 만들어줘"
+"네오 브루탈리즘 스타일로 대시보드 프로토타입"
+"Claude Design 시작해"
+```
+
+### 슬래시 커맨드
+
+```
+/claude-design
+```
+
+### PPTX 직접 생성 (Python)
+
+```python
+# 기존 AI 인플루언서 덱
+from tools.pptx_export import build
+build(output='D:/tmp/slides.pptx')
+
+# 커스텀 디자인 시스템으로 신규 덱
+from tools.pptx_utils import DesignSystem, PptxBuilder, build_pptx
+from pptx.util import Inches
+from pptx.enum.text import PP_ALIGN
+from pptx.dml.color import RGBColor
+
+ds = DesignSystem(
+    colors={
+        **DesignSystem().colors,
+        'v': RGBColor(0x00, 0x7A, 0xFF),   # accent 색상만 교체
+    }
+)
+
+def my_cover(prs, b: PptxBuilder):
+    sl = b.blank(prs)
+    b.set_bg(sl, b.C['fg'])
+    b.add_mixed(sl, Inches(1), Inches(2), Inches(8), Inches(1.5),
+        [[('제목', b.C['w'])]], size=48, align=PP_ALIGN.CENTER)
+    b.pn(sl, 1, 1, dark_bg=True)
+
+build_pptx([my_cover], 'D:/tmp/custom.pptx', ds=ds)
+```
+
+---
+
+## 슬라이드 덱 워크플로우
+
+```
+Step 0  콘텐츠 재편성      (원본 문서 있을 때 — 선택)
+Step 1  슬라이드 구성안    레이아웃 + 핵심 메시지 확정
+Step 2  HTML 슬라이드 생성 키보드 네비게이션 포함 (←→ Space F S)
+Step 3  Preview Loop       Chrome DevTools 스크린샷 → 반복 수정
+Step 4  다중 시안          병렬 생성 후 비교 선택
+Step 5  PPTX 변환          python-pptx → .pptx 파일 (선택)
+```
+
+HTML 슬라이드는 `d:\tmp\slides.html`에 저장되며 브라우저에서 바로 열 수 있다.
+
+---
+
+## python-pptx 정렬 보정
+
+python-pptx의 textbox는 기본 `anchor=TOP` + 내부 상단 여백(~0.05")을 가진다.  
+Shape(oval, rect)과 같은 Y에 배치해도 **시각적으로 어긋난다**.
+
+→ 핵심 규칙: shape과 나란한 모든 textbox에 `anchor=MSO_ANCHOR.MIDDLE` 적용
+
+10가지 패턴 상세: [`references/pptx-alignment-patterns.md`](plugins/claude-design/skills/claude-design/references/pptx-alignment-patterns.md)
+
+---
+
+## 라이선스
+
+MIT
