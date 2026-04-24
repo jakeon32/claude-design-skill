@@ -172,13 +172,66 @@ description: "Claude Design — Slide Deck 모드 전용 에이전트. 발표자
 ### 출력 형식: Self-contained HTML
 
 **필수 조건**:
-- Tailwind CDN + Google Fonts CDN (빌드 없이 바로 열림)
-- 전체 슬라이드 1개 파일 (`d:\tmp\slides.html`)
+- Tailwind CDN + Pretendard CDN (빌드 없이 바로 열림)
+- 전체 슬라이드 1개 파일 (`d:\tmp\slides.html` + `_test/outputs/`에 복사)
 - 키보드 네비게이션: `←` `→` 또는 `Space`
 - 슬라이드 카운터: 우하단 `N / Total`
 - 스피커 노트 토글: `S` 키 (ON일 때)
-- 풀스크린: `F` 키
-- 각 슬라이드 = 100vw × 100vh 전체 화면
+- 풀스크린: `F` 키 (토글)
+- **16:9 고정 캔버스**: 1920×1080 고정 크기 + CSS scale transform
+
+### 16:9 스케일링 필수 패턴 (레터박스 없는 전체화면)
+
+슬라이드는 **1920×1080 고정 캔버스**로 생성한다. `100vw × 100vh`를 쓰면 창 크기마다 레이아웃이 무너진다.
+
+**레터박스 제거 원칙**: `body` 배경을 현재 슬라이드 배경과 동일하게 설정 → 여백 영역이 슬라이드와 구분되지 않음.
+
+```css
+/* body는 항상 현재 슬라이드 배경색 — JS에서 go() 호출 시 갱신 */
+html, body { width:100vw; height:100vh; overflow:hidden; word-break:keep-all;
+             background: [S1 배경]; font-family:'Pretendard',sans-serif; }
+#deck { width:1920px; height:1080px; position:absolute; top:0; left:0;
+        transform-origin:top left; overflow:hidden; }
+.slide { width:1920px; height:1080px; display:none; position:absolute;
+         top:0; left:0; overflow:hidden; }
+.slide.active { display:flex; }
+#counter { position:fixed; bottom:20px; right:28px; font-size:13px;
+           color:rgba(255,255,255,0.35); z-index:1000; }
+#counter.dark { color:rgba(0,0,0,0.22); }
+```
+
+**JS 스케일링 + 배경 갱신**:
+```javascript
+const slideBgs = {
+  1:'linear-gradient(...)', 2:'#FFFFFF', 3:'#F8FAFF', /* 슬라이드별 bg */
+};
+function scale() {
+  const deck = document.getElementById('deck');
+  const s = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+  const ox = (window.innerWidth - 1920*s)/2;
+  const oy = (window.innerHeight - 1080*s)/2;
+  deck.style.transform = `translate(${ox}px,${oy}px) scale(${s})`;
+}
+function go(n) {
+  document.getElementById('s'+cur).classList.remove('active');
+  cur = Math.max(1, Math.min(n, total));
+  document.getElementById('s'+cur).classList.add('active');
+  document.body.style.background = slideBgs[cur] || '#000'; /* 레터박스 제거 */
+  const el = document.getElementById('counter');
+  el.textContent = cur + ' / ' + total;
+  el.className = lightSlides.has(cur) ? 'dark' : '';
+}
+window.addEventListener('resize', scale);
+scale();
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight'||e.key===' ') { e.preventDefault(); go(cur+1); }
+  if (e.key==='ArrowLeft') { e.preventDefault(); go(cur-1); }
+  if (e.key==='f'||e.key==='F') {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  }
+});
+```
 
 ### HTML 슬라이드 기본 구조
 
@@ -190,12 +243,13 @@ description: "Claude Design — Slide Deck 모드 전용 에이전트. 발표자
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>[덱 제목]</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Pretendard', system-ui, sans-serif; overflow: hidden; }
-  .slide { width: 100vw; height: 100vh; display: none; position: absolute; top: 0; left: 0; }
-  .slide.active { display: flex; }
+  *{margin:0;padding:0;box-sizing:border-box;word-break:keep-all;}
+  html,body{width:100vw;height:100vh;overflow:hidden;background:[S1-bg];font-family:'Pretendard',sans-serif;}
+  #deck{width:1920px;height:1080px;position:absolute;top:0;left:0;transform-origin:top left;overflow:hidden;}
+  .slide{width:1920px;height:1080px;display:none;position:absolute;top:0;left:0;overflow:hidden;}
+  .slide.active{display:flex;}
   #counter { position: fixed; bottom: 20px; right: 24px; font-size: 13px; color: rgba(255,255,255,0.5); z-index: 100; }
   #notes-panel { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.85); color: white; padding: 16px 24px; font-size: 14px; display: none; z-index: 200; }
   #notes-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
