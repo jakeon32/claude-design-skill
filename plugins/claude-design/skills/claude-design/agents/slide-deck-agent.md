@@ -180,16 +180,16 @@ description: "Claude Design — Slide Deck 모드 전용 에이전트. 발표자
 - 풀스크린: `F` 키 (토글)
 - **16:9 고정 캔버스**: 1920×1080 고정 크기 + CSS scale transform
 
-### 16:9 스케일링 필수 패턴 (레터박스 없는 전체화면)
+### 16:9 스케일링 필수 패턴
 
 슬라이드는 **1920×1080 고정 캔버스**로 생성한다. `100vw × 100vh`를 쓰면 창 크기마다 레이아웃이 무너진다.
 
-**레터박스 제거 원칙**: `body` 배경을 현재 슬라이드 배경과 동일하게 설정 → 여백 영역이 슬라이드와 구분되지 않음.
+**아우터 배경 원칙**: `body` 배경은 항상 `#111` 고정. 슬라이드 경계가 어두운 레터박스로 명확히 구분됨. 슬라이드별로 body 배경을 동기화하는 방식은 사용 금지.
 
 ```css
-/* body는 항상 현재 슬라이드 배경색 — JS에서 go() 호출 시 갱신 */
-html, body { width:100vw; height:100vh; overflow:hidden; word-break:keep-all;
-             background: [S1 배경]; font-family:'Pretendard',sans-serif; }
+/* body 배경은 #111 고정 — 슬라이드 경계를 어두운 레터박스로 표시 */
+html, body { width:100vw; height:100vh; overflow:hidden; background:#111;
+             font-family:'Pretendard',sans-serif; }
 #deck { width:1920px; height:1080px; position:absolute; top:0; left:0;
         transform-origin:top left; overflow:hidden; }
 .slide { width:1920px; height:1080px; display:none; position:absolute;
@@ -200,11 +200,12 @@ html, body { width:100vw; height:100vh; overflow:hidden; word-break:keep-all;
 #counter.dark { color:rgba(0,0,0,0.22); }
 ```
 
-**JS 스케일링 + 배경 갱신**:
+**JS 스케일링**:
 ```javascript
-const slideBgs = {
-  1:'linear-gradient(...)', 2:'#FFFFFF', 3:'#F8FAFF', /* 슬라이드별 bg */
-};
+let cur = 1;
+const total = [슬라이드 수];
+const lightSlides = new Set([밝은 배경 슬라이드 번호들]);
+
 function scale() {
   const deck = document.getElementById('deck');
   const s = Math.min(window.innerWidth/1920, window.innerHeight/1080);
@@ -216,13 +217,13 @@ function go(n) {
   document.getElementById('s'+cur).classList.remove('active');
   cur = Math.max(1, Math.min(n, total));
   document.getElementById('s'+cur).classList.add('active');
-  document.body.style.background = slideBgs[cur] || '#000'; /* 레터박스 제거 */
   const el = document.getElementById('counter');
   el.textContent = cur + ' / ' + total;
   el.className = lightSlides.has(cur) ? 'dark' : '';
 }
 window.addEventListener('resize', scale);
 scale();
+go(1);
 document.addEventListener('keydown', e => {
   if (e.key==='ArrowRight'||e.key===' ') { e.preventDefault(); go(cur+1); }
   if (e.key==='ArrowLeft') { e.preventDefault(); go(cur-1); }
@@ -246,7 +247,7 @@ document.addEventListener('keydown', e => {
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;word-break:keep-all;}
-  html,body{width:100vw;height:100vh;overflow:hidden;background:[S1-bg];font-family:'Pretendard',sans-serif;}
+  html,body{width:100vw;height:100vh;overflow:hidden;background:#111;font-family:'Pretendard',sans-serif;}
   #deck{width:1920px;height:1080px;position:absolute;top:0;left:0;transform-origin:top left;overflow:hidden;}
   .slide{width:1920px;height:1080px;display:none;position:absolute;top:0;left:0;overflow:hidden;}
   .slide.active{display:flex;}
@@ -465,6 +466,39 @@ Body     : 가장 작게        (예: 24px)
   → 텍스트는 이미지 위에 중앙 또는 하단 1/3 배치
   → 이미지 자체가 정보를 전달하지 않도록
 ```
+
+### 카드/컬럼 레이아웃 height 채우기 패턴 (필수)
+
+슬라이드 내 카드·컬럼이 슬라이드 높이를 채워야 할 때 **CSS Grid 사용 금지** — `height:100%` 상속 버그 발생.
+
+**올바른 패턴 (Flexbox)**:
+```html
+<!-- 슬라이드 섹션: flex-direction:column -->
+<section class="slide active" style="flex-direction:column;">
+  <!-- 헤더: flex-shrink:0 -->
+  <div style="flex-shrink:0; padding:64px 120px 44px;">제목</div>
+  <!-- 카드 컨테이너: flex:1 + min-height:0 -->
+  <div style="flex:1; display:flex; gap:20px; padding:0 120px 68px; min-height:0;">
+    <!-- 각 카드: flex:1 -->
+    <div style="flex:1; background:#fff; border-radius:16px;">카드</div>
+    <div style="flex:1; background:#fff; border-radius:16px;">카드</div>
+  </div>
+</section>
+```
+
+**핵심 규칙**:
+- 카드 컨테이너: `flex:1; display:flex; gap:N; min-height:0` (min-height:0 필수)
+- 각 카드: `flex:1` (균등 분배)
+- 타임라인 등 콘텐츠가 슬라이드 절반 이하면: 컨테이너에 `align-items:center` 추가 → 수직 중앙 정렬
+
+**금지 패턴**:
+```css
+/* ❌ 작동 안 함 — grid item에서 height:100%가 상속되지 않음 */
+display:grid; grid-template-columns:repeat(N,1fr); grid-template-rows:1fr;
+  → 내부 div에 height:100% 사용 시 height가 0으로 결정됨
+```
+
+---
 
 **생성 전 자기 체크**
 - [ ] 슬라이드당 핵심 메시지 1개인가?
