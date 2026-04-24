@@ -5,6 +5,23 @@
 
 ---
 
+## 0. 5개 디자인 철학 유파 (Design Philosophy Schools)
+
+스타일 추천 시 이 분류를 먼저 참고. 같은 유파 내에서 추천하면 일관성 높음.
+
+| 유파 | 핵심 정신 | 대표 스타일 |
+|-----|---------|-----------|
+| **정보 건축** (Information Architecture) | 데이터와 타이포가 구조 자체 | Swiss Minimalist, Bauhaus, Architectural Blueprint, Cyber Serif |
+| **키네틱 시학** (Kinetic Poetics) | 모션·스크롤이 내러티브를 만듦 | Kinetic Typography, Neon Velocity, Synapse |
+| **미니멀리즘** (Minimalism) | 제거가 표현이다, 여백이 메시지 | Minimal Dark, Neumorphism, Minimalist Beta, Dark Matte Editorial |
+| **실험 전위** (Experimental Vanguard) | 규칙을 깨서 주목을 얻는다 | Neo Brutalism, Cyberpunk, Acid Graphic, Deep Red |
+| **동양 철학** (Eastern Philosophy) | 비움이 콘텐츠다, 간결한 절제 | Organic, Botanical, Tectonic Stone, Cinematic Noir |
+
+→ 사용자 키워드가 명확히 한 유파에 속하면 그 유파 내에서 3가지 추천.  
+→ 유파 경계가 모호하면 서로 다른 유파에서 1개씩 교차 추천.
+
+---
+
 ## 1. 신호 추출 규칙
 
 사용자 설명에서 아래 차원을 추출:
