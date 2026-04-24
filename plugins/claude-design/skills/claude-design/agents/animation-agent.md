@@ -267,25 +267,32 @@ my-video/
 
 ### 씬 전환: Shader Transition
 
-```html
-<!-- 셰이더 앵커 씬은 opacity:0 -->
-<div class="scene clip" id="s3" data-start="8" data-duration="4"
-     data-track-index="0" style="opacity:0;">...</div>
-<div class="scene clip" id="s4" data-start="12" data-duration="4"
-     data-track-index="0" style="opacity:0;">...</div>
-```
+> **⚠️ 렌더 환경 제한 — 반드시 숙지**
+>
+> | 환경 | 동작 |
+> |------|------|
+> | `npx hyperframes preview .` (브라우저) | ✅ 실제 WebGL 셰이더 효과 전부 동작 |
+> | `npx hyperframes render .` (MP4 출력) | ❌ WebGL 비활성화 — instant cut fallback |
+>
+> HyperFrames가 헤드리스 렌더 시 `window.__HF_VIRTUAL_TIME__`을 세팅하면, HyperShader 내부 `Cg` 함수가 실행되어 WebGL 대신 `tl.set(opacity)` 즉시 전환으로 대체된다. 이건 라이브러리 설계 의도. 셰이더 효과 확인은 preview 전용.
+>
+> **MP4에 실제 전환 효과가 필요하면 CSS crossfade 사용** (아래 참조).
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/@hyperframes/shader-transitions/dist/index.global.js"></script>
 <script>
-  // 첫 번째 앵커는 명시적으로 표시해야 함
-  tl.set("#s3", { opacity: 1 }, 8.0);
+  // scenes.length === transitions.length + 1 이어야 함 (필수)
+  // 씬 div에 class="clip" 금지 (standalone 구성)
+  // 씬 1은 HTML에서 visible, 씬 2+는 style="opacity:0"
 
   window.HyperShader.init({
-    bgColor: "#0a0a0d",
-    scenes: ["s3", "s4"],
+    bgColor: "#0a0a0d",           // 씬 배경색과 일치시킬 것
+    scenes: ["s1", "s2", "s3"],   // 순서대로 나열
     timeline: tl,
-    transitions: [{ time: 11.75, shader: "cinematic-zoom", duration: 0.5 }]
+    transitions: [
+      { time: 4.0,  shader: "cinematic-zoom", duration: 0.5 },
+      { time: 8.75, shader: "domain-warp",    duration: 0.7 },
+    ]
   });
 </script>
 ```
@@ -303,6 +310,27 @@ my-video/
 | 몽환·미스터리 | `gravitational-lens`, `ripple-waves`, `swirl-vortex` |
 
 **규칙**: 6-8 씬 영상에 셰이더 2개가 적정. 모든 컷에 셰이더 사용 금지.
+
+### 씬 전환: CSS Crossfade (렌더 MP4용)
+
+셰이더 대신 MP4에 실제로 보이는 전환이 필요할 때:
+
+```javascript
+var transList = [
+  { from:"s1", to:"s2", transT:4.0,  dur:0.6, entryT:4.7  },
+  { from:"s2", to:"s3", transT:8.75, dur:0.7, entryT:9.5  },
+];
+
+transList.forEach(function(tr) {
+  // 전환 직전: incoming 콘텐츠 숨기기
+  tl.set("#"+tr.to+"-title", { autoAlpha:0, y:40 }, tr.transT - 0.03);
+  // 크로스페이드
+  tl.to("#"+tr.from, { opacity:0, duration:tr.dur, ease:"power2.inOut" }, tr.transT);
+  tl.fromTo("#"+tr.to, { opacity:0 }, { opacity:1, duration:tr.dur, ease:"power2.inOut" }, tr.transT);
+  // 입장 애니메이션
+  tl.to("#"+tr.to+"-title", { autoAlpha:1, y:0, duration:0.55, ease:"power3.out" }, tr.entryT);
+});
+```
 
 ### 렌더링 워크플로우
 
