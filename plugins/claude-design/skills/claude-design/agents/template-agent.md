@@ -40,6 +40,21 @@ description: "Claude Design — From Template 모드 전용 에이전트. 유저
 선택 시 → `references/templates/[업종].md` 로드 → 섹션 구조 확정 → 생성 진행.
 파일 제공 시 → 기존 분석 프로세스(아래) 실행.
 
+## 단위 선언 (STEP C — 재건 시작 직전 필수)
+
+템플릿 분석 후, 재건 HTML 작성 전에 아래를 선언하고 사용자 확인을 받는다.
+
+```
+[재건 선언]
+- 유지할 구조: (예: Navbar → Hero 2컬럼 → 3그리드 Features → CTA)
+- 교체할 것: 색상 → DESIGN_SYSTEM primary/secondary, 폰트 → [선택 폰트]
+- 새 콘텐츠 배치: (섹션별 대응 요약)
+- anti-slop 확인: 금지 폰트/패턴 없음
+→ 확인 후 HTML 재건
+```
+
+**1-at-a-time 원칙**: 섹션 단위 확인 후 다음 섹션 진행
+
 ## 분석 → 재건 프로세스
 
 ### 1. 레이아웃 구조 추출

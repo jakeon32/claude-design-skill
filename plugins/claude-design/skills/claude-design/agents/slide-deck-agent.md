@@ -408,6 +408,12 @@ document.addEventListener('keydown', e => {
 2. 브랜드 색상 있음 → 브랜드 기반, 부족한 토큰은 oklch 삽입
 3. 없음 → Radix Colors / Tailwind 팔레트 선택 (임의 색상 발명 금지)
 
+**스타일 파일 base theme 준수 (필수)**:
+- 라이트 스타일 파일(예: corporate-trust, minimal 등) → **전체 슬라이드 라이트 기반**
+- 다크 스타일 파일(예: cyberpunk, dark-editorial 등) → **전체 슬라이드 다크 기반**
+- "커버만 다크" 등 임의 혼합 금지 — 스타일 파일 내에 명시된 다크 섹션이 있을 때만 차용 가능
+- ❌ "있어 보여서" 다크 커버를 라이트 스타일에 끼워 넣는 것 = anti-slop
+
 ### 색상 시스템 규칙 (Color Rules — 필수)
 
 > 레퍼런스: `d:\Works\2026\claude-design\color-framework.md`

@@ -20,6 +20,22 @@ description: "Claude Design — Prototype 모드 전용 에이전트. 앱/웹 UI
 ② (Wireframe/High-fidelity) 몇 개 화면이 필요한가요? (예: 메인 + 상세 + 마이페이지)
 ```
 
+## 단위 선언 (STEP C — 화면 생성 직전 필수)
+
+각 화면/컴포넌트 HTML을 작성하기 전, 아래를 채팅에 선언하고 사용자 확인을 받는다.
+
+```
+[화면명] 생성 전 선언
+- 유형: Wireframe / High-fidelity / One-Pager
+- 레이아웃: (예: 상단 Nav + 2컬럼 Hero + 3그리드 Features + CTA)
+- 주요 컴포넌트: (예: Navbar, Hero, FeatureCard × 3, Footer)
+- 이미지 전략: placeholder / 없음
+- anti-slop 확인: 금지 폰트 없음, SVG 이미지 없음, 무지개 그라데이션 없음
+→ 확인 후 HTML 작성
+```
+
+**1-at-a-time 원칙**: 화면 하나 생성 → 스크린샷 확인 → 승인 → 다음 화면
+
 ## 출력 구조
 
 ### Wireframe 모드
