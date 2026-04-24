@@ -307,7 +307,8 @@ my-video/
 ### 렌더링 워크플로우
 
 ```bash
-npx hyperframes lint    # 0 errors 확인 후 진행
+npx hyperframes lint        # 0 errors 확인 후 진행
+npx hyperframes validate .  # WCAG contrast + animation 품질 검사
 npx hyperframes render . -o output.mp4   # 디렉토리를 인자로 (index.html 아님)
 ```
 
@@ -316,6 +317,16 @@ npx hyperframes render . -o output.mp4   # 디렉토리를 인자로 (index.html
 npx hyperframes render . -o out.mp4 --fps 60
 npx hyperframes render . -o out.mp4 --resolution 3840x2160
 ```
+
+**validate 사용법:**
+- `validate`는 Chrome headless로 5개 타임스탬프를 스크린샷하여 텍스트 contrast를 측정
+- WCAG AA 기준: 일반 텍스트 4.5:1 / 굵은 텍스트(24px+ 또는 19px+ bold) 3:1
+- 다크 배경에서 자주 걸리는 것: label, kicker 계열 서브 텍스트 → 밝기 올리기
+- `⚠ [GroupMarkerNotSet(crbug.com/...)]Automatic fallback to software WebGL` — Chrome headless 환경 한계, 무시 가능 (렌더 품질 영향 없음)
+
+**contrast 수정 원칙:**
+- 다크 배경(`#060810`~`#0a1f4a`): 서브 텍스트 최소 `#7aaae0` 이상 (4.5:1 확보)
+- 기존 팔레트 계열 유지하면서 밝기만 올리기 — 새 색상 발명 금지
 
 ### HyperFrames GSAP 패턴 레퍼런스
 
