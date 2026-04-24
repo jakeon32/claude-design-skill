@@ -33,7 +33,7 @@ C) 편집 가능한 PPTX 추가         → 아래 4개 하드 제약 필수 적
 ### PPTX 호환 HTML 4개 하드 제약 (C 선택 시)
 
 ```
-① 캔버스 크기: 960×540pt 고정 (1920×1080 아님)
+① 캔버스 크기: 1280×720px (= 960×540pt) — 기본 캔버스와 동일, 별도 변경 불필요
 ② 모든 텍스트: <p> 태그로 래핑 (div·span 금지)
 ③ <p> 태그에 background 속성 금지
 ④ gradient 사용 금지 (solid color만)
@@ -79,6 +79,28 @@ C) 편집 가능한 PPTX 추가         → 아래 4개 하드 제약 필수 적
 ```
 
 재편성 후 사용자 확인을 받고 Step 1로 진행한다.
+
+---
+
+## Step 0.5: 디자인 시스템 선언 (필수)
+
+HTML 작성 전 사용할 시스템을 구두로 선언하고 사용자 확인 후 진행한다. 중간에 방향이 틀릴 때 전체 재작업을 방지하는 단계.
+
+콘텐츠 재편성 후 (원본 없으면 초기 질문 후) 아래 형식으로 선언:
+
+```markdown
+사용할 디자인 시스템:
+- 스타일: [스타일 파일명 또는 직접 설명]
+- 색상: [Primary #hex] + [Accent #hex] (출처: 브랜드/스타일 파일/Tailwind)
+- 폰트: [Display용] + [Body용] (Inter/Roboto/Arial 제외)
+- 간격: 8pt 그리드 (8/16/24/32/48/64px)
+- 이미지 전략: [full-bleed 실사 / placeholder / 기하 도형 장식]
+- 배경색: 최대 2종
+
+이 방향으로 진행할까요?
+```
+
+사용자 확인 전까지 HTML 생성 시작 금지.
 
 ---
 
@@ -224,11 +246,13 @@ C) 편집 가능한 PPTX 추가         → 아래 4개 하드 제약 필수 적
 - 슬라이드 카운터: 우하단 `N / Total`
 - 스피커 노트 토글: `S` 키 (ON일 때)
 - 풀스크린: `F` 키 (토글)
-- **16:9 고정 캔버스**: 1920×1080 고정 크기 + CSS scale transform
+- **16:9 고정 캔버스**: 1280×720 고정 크기 + CSS scale transform
 
 ### 16:9 스케일링 필수 패턴
 
-슬라이드는 **1920×1080 고정 캔버스**로 생성한다. `100vw × 100vh`를 쓰면 창 크기마다 레이아웃이 무너진다.
+슬라이드는 **1280×720 고정 캔버스**로 생성한다. `100vw × 100vh`를 쓰면 창 크기마다 레이아웃이 무너진다.
+
+> 1280×720px = 960×540pt = PPTX LAYOUT_WIDE 표준. 1920×1080 사용 금지 — PPTX 변환 시 비표준 20"×11.25" 레이아웃이 돼 폰트가 작아 보임.
 
 **아우터 배경 원칙**: `body` 배경은 항상 `#111` 고정. 슬라이드 경계가 어두운 레터박스로 명확히 구분됨. 슬라이드별로 body 배경을 동기화하는 방식은 사용 금지.
 
@@ -236,9 +260,9 @@ C) 편집 가능한 PPTX 추가         → 아래 4개 하드 제약 필수 적
 /* body 배경은 #111 고정 — 슬라이드 경계를 어두운 레터박스로 표시 */
 html, body { width:100vw; height:100vh; overflow:hidden; background:#111;
              font-family:'Pretendard',sans-serif; }
-#deck { width:1920px; height:1080px; position:absolute; top:0; left:0;
+#deck { width:1280px; height:720px; position:absolute; top:0; left:0;
         transform-origin:top left; overflow:hidden; }
-.slide { width:1920px; height:1080px; display:none; position:absolute;
+.slide { width:1280px; height:720px; display:none; position:absolute;
          top:0; left:0; overflow:hidden; }
 .slide.active { display:flex; }
 #counter { position:fixed; bottom:20px; right:28px; font-size:13px;
@@ -254,9 +278,9 @@ const lightSlides = new Set([밝은 배경 슬라이드 번호들]);
 
 function scale() {
   const deck = document.getElementById('deck');
-  const s = Math.min(window.innerWidth/1920, window.innerHeight/1080);
-  const ox = (window.innerWidth - 1920*s)/2;
-  const oy = (window.innerHeight - 1080*s)/2;
+  const s = Math.min(window.innerWidth/1280, window.innerHeight/720);
+  const ox = (window.innerWidth - 1280*s)/2;
+  const oy = (window.innerHeight - 720*s)/2;
   deck.style.transform = `translate(${ox}px,${oy}px) scale(${s})`;
 }
 function go(n) {
@@ -294,8 +318,8 @@ document.addEventListener('keydown', e => {
 <style>
   *{margin:0;padding:0;box-sizing:border-box;word-break:keep-all;}
   html,body{width:100vw;height:100vh;overflow:hidden;background:#111;font-family:'Pretendard',sans-serif;}
-  #deck{width:1920px;height:1080px;position:absolute;top:0;left:0;transform-origin:top left;overflow:hidden;}
-  .slide{width:1920px;height:1080px;display:none;position:absolute;top:0;left:0;overflow:hidden;}
+  #deck{width:1280px;height:720px;position:absolute;top:0;left:0;transform-origin:top left;overflow:hidden;}
+  .slide{width:1280px;height:720px;display:none;position:absolute;top:0;left:0;overflow:hidden;}
   .slide.active{display:flex;}
   #counter { position: fixed; bottom: 20px; right: 24px; font-size: 13px; color: rgba(255,255,255,0.5); z-index: 100; }
   #notes-panel { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.85); color: white; padding: 16px 24px; font-size: 14px; display: none; z-index: 200; }
@@ -355,9 +379,34 @@ document.addEventListener('keydown', e => {
 
 - 배경색 → `DESIGN_SYSTEM.colors.background` 또는 `primary`
 - 텍스트 → `DESIGN_SYSTEM.colors.text`
-- 헤딩 → `DESIGN_SYSTEM.typography.heading_font`, H1 기준 48-64px
+- 헤딩 → `DESIGN_SYSTEM.typography.heading_font`, **제목 40-80px / 섹션 타이틀 56-96px / 히어로 120-160px**
+- 본문 최소 → **16px** (16px 미만 절대 금지 — 1920×1080 화면 기준 ≈24px 시각 크기)
+- 폰트 우선순위 → 스타일 파일 지정 폰트 > **Pretendard** (한국어 기본)
 - 한국어 → `references/korean-typography.md` 자동 적용
 - 스타일 정의 → `references/styles/[style].md` 로드 후 주입
+
+### Anti-slop 금지 목록 (슬라이드 생성 시 필수 준수)
+
+**폰트 블랙리스트** — 아래 폰트 사용 시 즉시 교체:
+- Inter, Roboto, Arial, Helvetica (AI 기본값)
+- Space Grotesk, Fraunces (최근 AI 남용)
+- ✅ 대체: 스타일 파일 지정 폰트 > Pretendard > Instrument Serif / Cormorant / Bricolage Grotesque
+
+**시각 요소 금지**:
+```
+❌ 무지개 그라데이션 배경 (보라→분홍→파랑 전체화면 그라데이션)
+❌ 둥근 카드 + 좌측 border accent
+     .card { border-radius:12px; border-left:4px solid #hex; }  ← AI 카드 시그니처
+❌ UI 이모지 장식 (🚀 ⚡ ✨ 🎯 — icon 필요 시 Lucide/Heroicons 사용)
+❌ SVG로 그린 인물·장면·기기 imagery → 회색 placeholder 사용
+❌ 조작된 통계 수치 ("10,000+ 고객" 등 근거 없는 숫자)
+❌ 가짜 고객 후기 → 실제 데이터 없으면 placeholder
+```
+
+**색상 결정 순서**:
+1. 스타일 파일에 팔레트 있음 → 그대로 사용
+2. 브랜드 색상 있음 → 브랜드 기반, 부족한 토큰은 oklch 삽입
+3. 없음 → Radix Colors / Tailwind 팔레트 선택 (임의 색상 발명 금지)
 
 ### 색상 시스템 규칙 (Color Rules — 필수)
 
@@ -522,9 +571,9 @@ Body     : 가장 작게        (예: 24px)
 <!-- 슬라이드 섹션: flex-direction:column -->
 <section class="slide active" style="flex-direction:column;">
   <!-- 헤더: flex-shrink:0 -->
-  <div style="flex-shrink:0; padding:64px 120px 44px;">제목</div>
+  <div style="flex-shrink:0; padding:40px 80px 28px;">제목</div>
   <!-- 카드 컨테이너: flex:1 + min-height:0 -->
-  <div style="flex:1; display:flex; gap:20px; padding:0 120px 68px; min-height:0;">
+  <div style="flex:1; display:flex; gap:16px; padding:0 80px 48px; min-height:0;">
     <!-- 각 카드: flex:1 -->
     <div style="flex:1; background:#fff; border-radius:16px;">카드</div>
     <div style="flex:1; background:#fff; border-radius:16px;">카드</div>
@@ -547,6 +596,7 @@ display:grid; grid-template-columns:repeat(N,1fr); grid-template-rows:1fr;
 ---
 
 **생성 전 자기 체크**
+- [ ] 디자인 시스템을 사용자에게 선언하고 확인받았는가?
 - [ ] 슬라이드당 핵심 메시지 1개인가?
 - [ ] Cover 슬라이드의 텍스트 요소가 2개 이하인가?
 - [ ] Cover 이미지가 배경 역할(정보 없음)로만 쓰였는가?
@@ -557,6 +607,13 @@ display:grid; grid-template-columns:repeat(N,1fr); grid-template-rows:1fr;
 - [ ] 배경 타입에 맞는 Accent Hex를 사용했는가? (Warm bg → Red/Orange / Cool bg → Orange/Teal)
 - [ ] Accent가 슬라이드당 최대 3곳 이하인가?
 - [ ] 전체화면 이미지 사용 시 z-index 3레이어 구조를 지켰는가?
+- [ ] **본문 텍스트가 최소 16px 이상인가?** (16px 미만 절대 금지)
+- [ ] 제목이 40px 이상인가?
+- [ ] 금지 폰트(Inter/Roboto/Arial/Space Grotesk) 사용 안 했는가?
+- [ ] 무지개 그라데이션 배경 없는가?
+- [ ] 둥근 카드 + border-left accent 조합 없는가?
+- [ ] SVG imagery 대신 placeholder 사용했는가?
+- [ ] 조작된 수치/가짜 인용 없는가?
 - [ ] **스크린샷으로 실제 가독성을 눈으로 확인했는가?** (썸네일 크기에서도 읽히는가)
 
 ### 데이터 차트 유형 (Data 슬라이드 선택 시)
