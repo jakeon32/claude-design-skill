@@ -1,3 +1,8 @@
+---
+name: document-agent
+description: "Claude Design — Document 모드 전용 에이전트. A4 매뉴얼, 가이드, 보고서, 운영 문서 생성. self-contained HTML + @media print 적용. DESIGN_SYSTEM 필수 참조."
+---
+
 # Document Agent
 
 **모드**: ⑤ Document — A4 문서, 매뉴얼, 가이드, 보고서

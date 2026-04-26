@@ -18,6 +18,12 @@ Claude Design Skill의 변경 이력. 형식은 [Keep a Changelog](https://keepa
   - 스타일과 직교(orthogonal): 같은 레이아웃을 어떤 스타일에도 조합 가능.
 
 ### Changed
+- **Phase 0 (2026-04-26): B 흐름 도입 — DESIGN_SYSTEM은 모드+콘텐츠 후 확정**
+  - **SKILL.md** — MANDATORY GATE 3 STEP (A·B·C) → **4 STEP** (project-planner → DSM → 모드별 에이전트 → 핸드오프) 재작성. Activation의 "XXX 스타일로" 진입 제거. Korean Localization Layer 섹션 → DSM 흡수("한국어 처리" 한 줄로 축소). Agent Orchestration 도식 ProjectPlanner → DesignSystemManager 순서로 swap.
+  - **agents/project-planner.md** — 트리거 위치 변경 (DESIGN_SYSTEM 확정 후 → 트리거 직후), 0.5단계 스타일 선택 삭제(DSM으로 이관), **콘텐츠 신호 추출 단계 신규** (language·content_signals: mood/industry/tone/audience/complexity), BRIEF 출력 형식 정비. Generator 직접 호출 → 메인 orchestrate.
+  - **agents/design-system-manager.md** — 6분기(Figma/스타일라이브러리/코드베이스/자산/텍스트/자동추천) → **자동 추천 단일 경로**로 단순화. BRIEF 입력 명세 추가. 자동 추천 표준 흐름(top 3 + "직접 원하는 느낌 있나요?" 동시 질문). 모드별 출력 환경 반영(slide=16:9·본문 16px / document=A4 인쇄 고려 타이포). 한국어 자동 병합(SKILL.md Korean Layer 흡수). 자산 보강.
+  - **agents/document-agent.md** — frontmatter 추가 (5모드 통일 위임 prerequisite 해결).
+  - **references/styles/index.md** — "XXX 스타일로 해줘" 사용법 안내 → 자동 추천 사용법으로 한 줄 수정.
 - **SKILL.md** — v2.4 → v3 (13 에이전트). MANDATORY GATE의 STEP C에서 모드별 에이전트를 **Agent tool로 위임 강제**. 이전: "에이전트 파일 규칙에 따라 진행" → 이후: "Agent tool 호출 (subagent_type: ...)" 명시.
 - **design-system-manager.md** — Figma MCP·스타일 라이브러리·코드베이스·텍스트·자동 추천 5개 분기 명문화.
 - **project-planner.md** — Junior Designer 3-체크포인트 워크플로(요구사항·자산·스켈레톤) 도입.

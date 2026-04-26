@@ -1,7 +1,7 @@
 # Style Library Index
 source: superdesign.dev (41 styles) + designprompts.dev (32 styles) = 73 styles
 
-사용법: "XXX 스타일로 해줘" → 해당 파일 로드 → DESIGN_SYSTEM에 주입
+사용법: design-system-manager가 BRIEF의 content_signals(mood/industry/tone)로 자동 추천 (top 3) → 사용자 선택 → 해당 파일 로드 → DESIGN_SYSTEM에 주입
 
 ---
 

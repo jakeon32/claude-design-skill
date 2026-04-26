@@ -1,24 +1,23 @@
 ---
 name: claude-design
-description: "Claude Design methodology skill v3 — Claude Code에서 디자인 결과물 생성 (프로토타입, 슬라이드, A4 문서, 템플릿, 자유형식). 31+ 스타일 라이브러리 자동 추천 + 5개 모드 + 13-agent orchestration. Trigger: 디자인 만들어줘, 프로토타입, 슬라이드, 슬라이드 덱, 피치덱, 발표자료, PPT, PPTX, 원페이저, 목업, 와이어프레임, 랜딩페이지, 매뉴얼, 가이드, A4 문서, 'XXX 스타일로 만들어줘', 'Claude Design v3 시작해', design, prototype, slide deck, pitch deck, one-pager, mockup, wireframe, landing page, dashboard, email template, social graphic, banner, infographic. Do NOT use for: code-only implementation without design intent, pure content writing."
+description: "Claude Design methodology skill v3 — Claude Code에서 디자인 결과물 생성 (프로토타입, 슬라이드, A4 문서, 템플릿, 자유형식). 31+ 스타일 라이브러리 자동 추천 + 5개 모드 + 13-agent orchestration. Trigger: 디자인 만들어줘, 프로토타입, 슬라이드, 슬라이드 덱, 피치덱, 발표자료, PPT, PPTX, 원페이저, 목업, 와이어프레임, 랜딩페이지, 매뉴얼, 가이드, A4 문서, 'Claude Design v3 시작해', design, prototype, slide deck, pitch deck, one-pager, mockup, wireframe, landing page, dashboard, email template, social graphic, banner, infographic. Do NOT use for: code-only implementation without design intent, pure content writing."
 ---
 
 # Claude Design Skill
 
 Claude Design 워크플로우를 Claude Code에서 재현하는 마스터 스킬. 같은 콘텐츠를 31+ 스타일로 즉시 재해석.
 
-**Core Philosophy**: DESIGN_SYSTEM 먼저 → 5개 모드 분기 → 생성 → 반복 수정 → Claude Code 핸드오프
+**Core Philosophy**: 모드 선택 + 콘텐츠 수집 → DESIGN_SYSTEM 확정 → 모드별 생성 → 핸드오프
 
 ## Activation
 
 - `/claude-design` 또는 자연어 트리거(description 키워드 매칭) → 자동 진입
 - `"Claude Design 시작해"` → MANDATORY GATE 즉시 진입
-- `"XXX 스타일로"` → DesignSystemManager가 스타일 파일 로드 후 진행
 
 ## Agent Orchestration
 
 ```
-DesignSystemManager → ProjectPlanner → Generator(모드별) → VisualRefiner → Handoff
+ProjectPlanner → DesignSystemManager → Generator(모드별) → VisualRefiner → Handoff
                                        │
                                        ├─ ① prototype-agent
                                        ├─ ② slide-deck-agent → slide-qa-agent (자동)
@@ -37,51 +36,49 @@ DesignSystemManager → ProjectPlanner → Generator(모드별) → VisualRefine
 **어떤 생성 단계도 이 게이트를 통과하지 않으면 실행 불가.**
 
 ```
-STEP A. 스타일 파일 의무 로드 (파일을 실제로 Read — 기억에 의존 금지)
-  → 스타일 지정됨:
-      Read references/styles/[style].md 전체 읽기
-  → 스타일 미지정:
-      Features의 Style System 절차 따름 (style-recommender → top 3 → 사용자 선택 → 선택된 스타일 파일 Read)
-  → 스타일 파일에서 base theme(light/dark) 추출 → DESIGN_SYSTEM에 기록
+STEP 1. project-planner 위임 (Agent tool 호출 — subagent_type: "project-planner")
+  → BRIEF 출력 (mode + content + language + content_signals + assets + pptx_mode)
+  → 내부 처리: 모드 선택 / 콘텐츠·원본 수집 / 언어(KR/EN) 판단 / 신호(mood·industry·tone·audience·complexity) 추출 / 자산 수집
 
-STEP B. 디자인 시스템 확인 (사용자 OK 필수)
-  → DESIGN_SYSTEM 핵심 요약 출력:
-    • 대표 색상 3개 (primary, accent, background)
-    • heading_font / body_font
-    • base theme (light/dark)
-  → "이 방향으로 진행할까요?" → OK 전까지 생성 금지
+STEP 2. design-system-manager 위임 (Agent tool 호출 — subagent_type: "design-system-manager")
+  → 입력: BRIEF
+  → 내부 처리: 자동 추천 (top 3 + "직접 원하는 느낌 있나요?" 동시 질문) / 사용자 컨셉 선택 / 모드별 출력 환경 반영 / 한국어 자동 병합 / 자산 보강
+  → 출력: DESIGN_SYSTEM 블록 + 확정 컨셉
 
-STEP C. 모드별 에이전트 위임 (Agent tool 사용 — 직접 생성 금지)
-  → 아래 에이전트를 Agent tool로 호출한다. 직접 생성하지 않는다.
+STEP 3. 모드별 에이전트 위임 (Agent tool 호출 — 5모드 통일)
+  → 입력: BRIEF + DESIGN_SYSTEM + 확정 컨셉
+  → 모드별 에이전트가 시각 프리뷰·선택·본 작업까지 일임
 
-  ② Slide Deck:
-     Agent tool 호출 (subagent_type: "slide-deck-agent")
-     prompt에 포함: DESIGN_SYSTEM 블록 전체 + 콘텐츠 요약 + 사용자 요청
-     → 에이전트가 Step 0~Step 5 전체를 관리한다
+  ① Prototype     → Agent tool 호출 (subagent_type: "prototype-agent")
+  ② Slide Deck    → Agent tool 호출 (subagent_type: "slide-deck-agent")
+  ③ From Template → Agent tool 호출 (subagent_type: "template-agent")
+  ④ Other         → Agent tool 호출 (subagent_type: "other-agent")
+  ⑤ Document      → Agent tool 호출 (subagent_type: "document-agent")
 
-  ① Prototype  → prototype-agent.md 규칙에 따라 직접 진행
-  ③ From Template → template-agent.md 규칙에 따라 직접 진행
-  ④ Other → other-agent.md 규칙에 따라 직접 진행
-  ⑤ Document → document-agent.md 규칙에 따라 직접 진행
+STEP 4. 결과물 핸드오프 (사용자에게 전달)
 ```
 
-**핵심 원칙**: 각 에이전트 파일이 그 모드의 유일한 생성 규칙 소스 — SKILL.md는 흐름만 정의.
+**큰 방향 변경 시 예외**: 사용자가 "컨셉 자체 다시" 같은 큰 변경을 요청하면 메인이 STEP 2로 돌아가 DSM 재호출. 부분 수정·시각 미세 조정은 sub-agent 안에서 처리.
+
+**핵심 원칙**:
+- 메인은 큰 흐름(에이전트 호출 순서)만 관장. 각 sub-agent 내부 루프(사용자 OK·재시도·반복)에 간섭 안 함.
+- sub-agent끼리 직접 호출 금지 — 메인이 orchestrate.
+- 각 에이전트 파일이 그 모드의 유일한 생성 규칙 소스 — SKILL.md는 흐름만 정의.
 
 ## 4-Step Pipeline
 
 | # | Step | Owner | 단일 출처 |
 |---|------|-------|----------|
-| 1 | DESIGN_SYSTEM 확정 | design-system-manager | `agents/design-system-manager.md` |
-| 2 | 모드 선택 + 소스 수집 | project-planner | `agents/project-planner.md` |
+| 1 | 모드 선택 + 콘텐츠 수집 + 신호 추출 | project-planner | `agents/project-planner.md` |
+| 2 | DESIGN_SYSTEM 확정 + 컨셉 추천 | design-system-manager | `agents/design-system-manager.md` |
 | 3 | 생성 → 프리뷰 → 수정 (반복) | 모드별 generator → visual-refiner | `agents/[mode]-agent.md` + `references/output-common.md` |
-| 4 | Claude Code 핸드오프 | (메인) | DESIGN_SYSTEM + 코드 + 파일 구조 + 다음 단계 출력 |
+| 4 | 핸드오프 | (메인) | DESIGN_SYSTEM + 코드 + 파일 구조 + 다음 단계 출력 |
 
 세부 절차는 owner 에이전트.md / reference 단일 출처. SKILL.md는 흐름만 정의 (MANDATORY GATE 참조).
 
-## Korean Localization Layer
+## 한국어 처리
 
-**트리거**: 한국어 입력 / "한국 시장·사용자·KR·국내" 언급 / Jake의 모든 작업(기본).
-→ `references/korean-typography.md` 로드 후 DESIGN_SYSTEM.typography 재조정. 원본 스타일의 색상·레이아웃은 유지, 타이포·스페이싱만 재조정. 세부 규칙은 단일 출처.
+한국어 콘텐츠는 design-system-manager가 BRIEF의 `language` 필드를 보고 자동 병합한다 (`references/korean-typography.md`). SKILL.md 메인은 별도 처리 안 함 — 단일 출처는 design-system-manager.
 
 ## Anti-Slop Rules
 
