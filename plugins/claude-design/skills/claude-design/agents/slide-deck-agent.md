@@ -604,7 +604,7 @@ document.addEventListener('keydown', e => {
 
 ### 사진 레이아웃 규칙 (Photo Layout)
 
-photo-overlay / photo-split / full-bleed 사용 조건 + Unsplash 추천 ID + PPTX 모드 처리는 `references/photo-layouts.md` 참조. 전체화면 사진 사용 시 z-index 3레이어 구조는 본 문서 "전체화면 배경 이미지" 규칙 참조.
+photo-overlay / photo-split / full-bleed 사용 조건 + Unsplash 추천 ID + PPTX 모드 처리는 `references/photo-layouts.md` 참조. 전체화면 사진 사용 시 z-index 3레이어 구조는 `references/color-rules.md` "전체화면 배경 이미지" 참조.
 
 ---
 
