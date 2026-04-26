@@ -1,0 +1,98 @@
+# Changelog
+
+Claude Design Skill의 변경 이력. 형식은 [Keep a Changelog](https://keepachangelog.com/) 기반.
+
+---
+
+## [Unreleased] — v3 진행 중
+
+### Added
+- **slide-qa-agent** — HTML 슬라이드 코드 검수 전담 에이전트 (`agents/slide-qa-agent.md`).
+  - 8개 그룹·30개 항목 자동 체크: 구조 무결성(A·9)·한국어 폰트(B·2)·letter-spacing(C·2)·카운터 시스템(D·3)·그리드 다양성(E·3)·PPTX 호환(F·3)·일반 규칙(G·5)·공간 문법 다양성(H·3).
+  - `slide-deck-agent` 완료 직후 자동 실행. ❌ 항목 자동 수정 후 VisualRefiner로 인계.
+  - ⚠️ slide-qa-agent.md / SKILL.md description의 "7그룹 24항목" 표기는 outdated — Phase 2(SKILL.md 슬림화) + slide-qa-agent description 정정 시 일괄 갱신 예정.
+- **qa-pipeline.md** — 슬라이드 생성 → QA → 검증 카탈로그 빌드 6단계 자동 루프 정의 (`references/qa-pipeline.md`).
+- **style-deck-personality.md** — 73개 스타일을 슬라이드 덱 발표 맥락(권위/설득/감성/분석/혁신)으로 분류 (`references/style-deck-personality.md`).
+- **slide-layouts/** — 30+ 레이아웃 정의 카탈로그를 별도 폴더로 분리 (`references/slide-layouts/`).
+  - `cover-layouts.md`, `text-layouts.md`, `visual-layouts.md`, `statement-layouts.md`, `data-layouts.md`, `mockup-layouts.md`, `card-layouts.md`, `layout-variation-spec.md`, `variations.md`, `index.md`.
+  - 스타일과 직교(orthogonal): 같은 레이아웃을 어떤 스타일에도 조합 가능.
+
+### Changed
+- **SKILL.md** — v2.4 → v3 (13 에이전트). MANDATORY GATE의 STEP C에서 모드별 에이전트를 **Agent tool로 위임 강제**. 이전: "에이전트 파일 규칙에 따라 진행" → 이후: "Agent tool 호출 (subagent_type: ...)" 명시.
+- **design-system-manager.md** — Figma MCP·스타일 라이브러리·코드베이스·텍스트·자동 추천 5개 분기 명문화.
+- **project-planner.md** — Junior Designer 3-체크포인트 워크플로(요구사항·자산·스켈레톤) 도입.
+- **slide-deck-agent.md** — Cover 장식 패턴 라이브러리 6종 추가 + 수치 검증, 1280×720 캔버스 표준화, Anti-slop 규칙 적용. (v3 슬림화 진행 중)
+- **visual-refiner.md** — 5차원 디자인 품질 평가, 시각적 지배 계층(Dominance Hierarchy), 시각적 무게 균형 체크리스트 추가. (v3에서 코드 분석 QA 섹션은 slide-qa-agent로 이관 예정)
+
+### Tools
+- **pptx_to_png.py** 추가 — PowerPoint COM 자동화로 PPTX 각 슬라이드를 1280×720 PNG로 export. `make_compare.py` 입력 자동화. Windows 전용, Mac/Linux는 추후 LibreOffice headless 지원 예정.
+- **tools/README.md** 추가 — 5개 도구 역할 매트릭스 + 표준 8단계 워크플로 + import/CLI 사용 패턴.
+- **requirements.txt** — `pywin32>=306; sys_platform == 'win32'` 추가.
+
+### 진행 중 구조 재구성 (예정)
+- agents/ 평면 + prefix 그룹화 (orch-/gen-/spec-/qa-).
+- references/ 하위 분류 (core/, pptx/, styles/, slide-layouts/, templates/).
+- SKILL.md 슬림화 (v* 신기능 섹션 통합 → CHANGELOG로 이전).
+- visual-refiner.md의 코드 분석 QA 섹션 → slide-qa-agent로 이관.
+- slide-deck-agent.md 슬림화 (1304줄 → ~400줄).
+
+### Fixed
+- `references/slide-layouts/index.md`의 Timeline 카탈로그 링크 — 존재하지 않는 `timeline-layouts.md`를 가리키던 것을 `data-layouts.md#horizontal-timeline`로 수정. Roadmap은 추후 추가 표시.
+- `.gitignore`에 `.claude/worktrees/` 추가 (`.claude/` 전체가 아닌 이유: 향후 settings.json·agents 공유 가능성).
+
+---
+
+## [2.4] — 2026-04 (커밋 c0b6cd6 ~ c17b1f2)
+
+### Added — Document 모드
+- **document-agent** — A4 매뉴얼·가이드·운영 문서 생성 전용.
+- 6+1 페이지 유형: A(조회/리스트), B(입력/폼), C(번호 어노테이션), D(상세/액션), E(대시보드/맵), F(2단 레이아웃).
+- 7단계 정보 계층: L1(제목)~L7(본문) — Notion 블록 구조와 동일.
+- block-filling 레이아웃: 794px × 1020px A4 시뮬레이션, `@media print` 지원.
+- SaaS 화면 기반 매뉴얼 자동 생성: Chrome DevTools MCP 스크린샷 + DOM 분석.
+
+### Added — Slide Deck 강화
+- **Cover 장식 패턴 라이브러리 6종** + 수치 검증 (c17b1f2).
+- **Cover 장식 요소 원칙** (70d826e).
+- **모드별 MANDATORY GATE 구조 완성** (dd32981).
+- **1280×720 캔버스 표준화** + Anti-slop 규칙 적용 (694befb).
+- **Animation Agent 강화**: HyperShader 렌더 환경 제한, validate 워크플로우, contrast 주의사항, HyperFrames 비디오 렌더링 파이프라인 섹션 (be35aae ~ fc6e799).
+- **카드 height flexbox 패턴** + outer bg #111 고정 (e15e312).
+- **Huashu Design 분석 기반 워크플로 개선** + `output-common.md` 추가 (be35aae).
+
+---
+
+## [2.2] — 2026-04 초
+
+### Added — 스타일 자동 추천
+- 스타일 미지정 시 DesignSystemManager가 자동으로 top 3 추천:
+  1. 사용자 설명에서 tone/mood/industry 신호 추출
+  2. `references/style-recommender.md` 태그 인덱스(73개 스타일) 매칭
+  3. 가중치 점수 계산 → 다양성 확보된 top 3 후보 제시
+  4. 선택 즉시 DESIGN_SYSTEM 주입 → 기존 워크플로우 합류
+
+---
+
+## [2.1] — 2026-03 (커밋 e561b8e)
+
+### Added — designprompts.dev Style Library 통합
+- 31+ 스타일 라이브러리 통합 — 같은 콘텐츠를 다른 미학으로 즉시 재해석 가능.
+- 사용자가 "XXX 스타일로" 또는 특정 스타일명 언급 시:
+  1. `references/styles/style-library.md`에서 해당 스타일 정의 로드
+  2. DESIGN_SYSTEM에 팔레트/타이포/레이아웃 traits 주입
+  3. 사용자 브랜드 색상이 있으면 스타일보다 우선 적용 (하이브리드)
+
+### Added — PPTX 파이프라인
+- **Photo Panel Gradient Blend 규칙** (771a3ee).
+- **120% gradient axis extension rule** + seam elimination (e4612e5).
+- 플러그인 레이아웃 재구성 + `pptx_utils.py` 일반화 (3d92fac).
+
+---
+
+## [2.0] — 초기
+
+### 핵심 워크플로우
+- 디자인 시스템 먼저 → (선택) 스타일 지정 → 4개 모드 분기 → 소스 수집 → 생성 → 반복 수정 → Claude Code 핸드오프
+- 4개 출력 모드: Prototype / Slide Deck / From Template / Other
+- 5차원 디자인 품질 평가 (VisualRefiner)
+- Korean Localization Layer (Pretendard, line-height, letter-spacing 한국어 기준값)
