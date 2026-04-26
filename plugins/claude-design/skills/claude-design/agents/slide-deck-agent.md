@@ -93,69 +93,19 @@ S5: 3col-equal  ✓
 - 모드 ② Slide Deck 선택 시
 - "슬라이드", "발표자료", "피치덱", "PPT", "프레젠테이션", "보고서" 등
 
+## 입력 (메인이 위임 시 전달)
+
+- **BRIEF** (project-planner 산출): mode, content, language, content_signals, assets, pptx_mode
+- **DESIGN_SYSTEM** (design-system-manager 산출): 확정된 토큰 + 컨셉
+
+이 두 입력은 SDA 진입 시점에 이미 확정되어 있다고 가정한다. SDA 자체로 스타일을 추천하거나 DESIGN_SYSTEM을 다시 선언하지 않는다.
+
 ## 초기 질문 (2개만)
 
 ```
 ① 발표 목적과 대상은? (예: 투자자 피치, 사내 팀 보고, 고객 제안)
 ② 슬라이드 수 목표는? 스피커 노트 필요한가요? (ON/OFF)
 ```
-
-## STEP A: 스타일 선정 (시각 프리뷰 — 필수)
-
-> **에이전트가 직접 수행한다. 텍스트 설명만 제공하고 사용자에게 선택하게 하지 않는다.**
-
-### 실행 순서
-
-```
-1. references/style-recommender.md 읽기
-   → mood/industry 기반 top 3 후보 선정
-
-2. references/style-deck-personality.md 읽기
-   → 각 후보의 발표 성격이 콘텐츠 목적과 맞는지 검증
-
-3. top 3 커버 프리뷰 HTML 직접 생성
-   → d:\tmp\style-preview-[timestamp].html 저장
-
-4. Puppeteer 스크린샷 → 채팅에 표시
-
-5. 사용자 선택
-
-6. 선택된 스타일 파일 Read → DESIGN_SYSTEM 확정
-```
-
-### 커버 프리뷰 생성 규칙
-
-3개 스타일을 1280×720 슬라이드로 각각 렌더링, `scale(0.4)`로 축소해 나란히 표시.
-
-**레이아웃 타입 선택 기준 (스타일 계열별)**:
-
-| 스타일 계열 | 대표 레이아웃 | 이유 |
-|---|---|---|
-| Dark 계열 | `bottom-hero` | 하단 타이틀 + 상단 여백이 무게감 표현 |
-| Cinematic / Editorial Dark | `photo-overlay` | 사진 풀블리드가 분위기를 만드는 스타일 |
-| Light 미니멀 / Corporate | `center-full` | 여백이 메시지인 스타일 |
-| Swiss / Architectural / Tech | `top-rule` | 타이포가 상단에서 구조를 만드는 스타일 |
-| Neo-Brutalism / Bold | `panel-right` 또는 `diagonal` | 강한 면 분할이 핵심 |
-| Organic / Natural / Botanical | `photo-split` | 사진 패널이 스타일 정체성 |
-| Raw Form / Corporate | `panel-split` | 좌우 패널 면분할이 본질 |
-
-**프리뷰 HTML 구조**:
-```html
-<!-- 3개 스타일 나란히 — scale(0.4) 축소 -->
-<!-- 각 슬라이드 1280×720 → 표시 512×288 -->
-<!-- 하단에 스타일명 + 레이아웃 타입 레이블 -->
-```
-
-**추천 출력 형식** (스타일 선택 전 사용자에게):
-```
-① [스타일명]: "[발표 성격] — [왜 이 콘텐츠에 맞는지 1줄]"
-② [스타일명]: "..."
-③ [스타일명]: "..."
-[스크린샷]
-어떤 스타일로 진행할까요?
-```
-
----
 
 ## Step 0-pre: 납품 형식 최선결정 (필수 — HTML 작성 전)
 
@@ -250,28 +200,6 @@ gradient 금지로 인해 아래 패턴을 대체 적용한다.
 ```
 
 재편성 후 사용자 확인을 받고 Step 1로 진행한다.
-
----
-
-## Step 0.5: 디자인 시스템 선언 (필수)
-
-HTML 작성 전 사용할 시스템을 구두로 선언하고 사용자 확인 후 진행한다. 중간에 방향이 틀릴 때 전체 재작업을 방지하는 단계.
-
-콘텐츠 재편성 후 (원본 없으면 초기 질문 후) 아래 형식으로 선언:
-
-```markdown
-사용할 디자인 시스템:
-- 스타일: [스타일 파일명 또는 직접 설명]
-- 색상: [Primary #hex] + [Accent #hex] (출처: 브랜드/스타일 파일/Tailwind)
-- 폰트: [Display용] + [Body용] (Inter/Roboto/Arial 제외)
-- 간격: 8pt 그리드 (8/16/24/32/48/64px)
-- 이미지 전략: [full-bleed 실사 / placeholder / 기하 도형 장식]
-- 배경색: 최대 2종
-
-이 방향으로 진행할까요?
-```
-
-사용자 확인 전까지 HTML 생성 시작 금지.
 
 ---
 
@@ -674,75 +602,9 @@ document.addEventListener('keydown', e => {
 - 한국어 → `references/korean-typography.md` 자동 적용
 - 스타일 정의 → `references/styles/[style].md` 로드 후 주입
 
-### 사진 레이아웃 규칙 (Photo Layout — 커버 및 내용 슬라이드)
+### 사진 레이아웃 규칙 (Photo Layout)
 
-#### 이미지 소스
-
-```
-현재: Unsplash URL 패턴 (테스트용)
-  https://images.unsplash.com/photo-{ID}?w=1280&h=720&fit=crop&q=80
-
-추후: 사용자가 직접 경로/URL 제공 시 해당 소스로 교체
-  예) "사진은 D:\assets\hero.jpg 써줘"
-```
-
-#### photo-overlay 사용 조건
-
-```
-✅ 적합:
-  - Cinematic, Midnight Editorial, Neural Noir, Vaporwave 등 Dark 감성 스타일
-  - 분위기·감성이 메시지인 커버 (브랜드 스토리, 비전 발표)
-  - 사진이 배경 역할 → 텍스트가 주인공
-
-❌ 부적합:
-  - 정보 전달 중심 슬라이드 (차트·표 있는 슬라이드)
-  - 사진에 텍스트·데이터가 담긴 경우
-```
-
-#### photo-split 사용 조건
-
-```
-✅ 적합:
-  - Organic, Botanical, Luxury Editorial, Raw Form 등 사진+텍스트 균형 스타일
-  - 제품·공간·인물을 소개하는 슬라이드
-  - 사진이 콘텐츠의 일부 → 텍스트와 대등한 비중
-
-❌ 부적합:
-  - 전체를 사진 분위기로 감싸야 할 때 (→ photo-overlay 사용)
-```
-
-#### 키워드별 Unsplash 추천 이미지 ID
-
-| 분위기/주제 | Unsplash Photo ID |
-|---|---|
-| 어두운 영화관/네온 | `1536440136628-849c177e76a1` |
-| 도시 야경 | `1477959858617-67f85cf4f1df` |
-| 어두운 건축 | `1489824904134-2416b34f02d3` |
-| 우주/AI 추상 | `1451187580459-43490279c0fa` |
-| 숲/자연 | `1441974231531-c6227db76b6e` |
-| 식물/잎사귀 | `1518531933037-91b2f5f229cc` |
-| 커피/카페 | `1509042239860-f550ce710b93` |
-| 고급 인테리어 | `1490481651871-ab68de25d43d` |
-| 산/여행 | `1506905925346-21bda4d32df4` |
-| 책/도서관 | `507842217343-583bb7270b66` |
-| 유기적 질감 | `1519241047957-be31d7379a5d` |
-| 숲 산책로 | `1448375240773-3ef3c3e9f2f3` |
-
-> 위 ID는 대표 예시. 콘텐츠에 더 잘 맞는 사진이 있으면 해당 ID로 교체.
-
-#### 내용 슬라이드에서의 사진 사용
-
-```
-커버 외 슬라이드에서도 사진 사용 가능:
-  - photo-split: 설명 텍스트 + 관련 사진 (2col-LR 그리드)
-  - photo-overlay: 인용구·강조 메시지 슬라이드 (배경 사진 + 텍스트 오버레이)
-  - full-bleed: 섹션 전환 간지 슬라이드
-
-사진 슬라이드 생성 시:
-  ① Unsplash ID 선택 (위 표 또는 콘텐츠 맞춤)
-  ② z-index 3레이어 구조 적용 (아래 "전체화면 배경 이미지" 규칙)
-  ③ PPTX 모드 시 gradient → solid rgba() 오버레이로 교체
-```
+photo-overlay / photo-split / full-bleed 사용 조건 + Unsplash 추천 ID + PPTX 모드 처리는 `references/photo-layouts.md` 참조. 전체화면 사진 사용 시 z-index 3레이어 구조는 본 문서 "전체화면 배경 이미지" 규칙 참조.
 
 ---
 
@@ -775,100 +637,13 @@ document.addEventListener('keydown', e => {
 - "커버만 다크" 등 임의 혼합 금지 — 스타일 파일 내에 명시된 다크 섹션이 있을 때만 차용 가능
 - ❌ "있어 보여서" 다크 커버를 라이트 스타일에 끼워 넣는 것 = anti-slop
 
-### 색상 시스템 규칙 (Color Rules — 필수)
+### 색상 시스템 규칙 (Color Rules)
 
-> 레퍼런스: `d:\Works\2026\claude-design\color-framework.md`
+팔레트 결정 순서, 60-30-10 분배, Master Accent 통일, Photo Panel Gradient Blend(120% 할당·페이드 범위), 전체화면 z-index 3레이어 구조는 `references/color-rules.md` 참조.
 
-**팔레트 결정 순서**
-1. 스타일 파일명 → color-framework.md Section 5에서 해당 행 확인
-2. 배경 타입 판단 → Section 2 매트릭스 행 적용
-3. Primary / Secondary / Accent Hex 결정
-
-**60-30-10 원칙**
-- 60% Primary: 메인 배경, 대영역
-- 30% Secondary: 카드/패널 배경, 그래프 영역, 섹션 구분
-- 10% Accent: CTA 버튼, 핵심 숫자, 강조 라인 — **슬라이드당 최대 3곳**
-
-**혼합 덱 Accent 통일**
-- Master Accent 1개 고정 → 전체 덱에서 변경 금지
-- 10% 초과 위험 요소(라벨·구조적 텍스트)는 `#94A3B8` 중립색으로 격하
-
-**이미지 패널 그라데이션 블렌드 (Photo Panel Gradient Blend)**
-
-이미지가 전체 높이 또는 너비로 인접 패널과 함께 사용될 때, 이미지 위에 인접 패널의 배경색으로 페이드되는 그라데이션 오버레이를 적용한다.  
-→ 이미지가 인접 패널로 자연스럽게 녹아드는 효과. 경계선 없이 레이아웃이 하나로 연결되어 보인다.
-
-**방향 규칙**:
-| 이미지 위치 | 그라데이션 방향 | 패턴 |
-|------------|--------------|------|
-| 오른쪽 | `to right` | `linear-gradient(to right, [왼쪽패널색] 0%, transparent 50%)` |
-| 왼쪽 | `to left` | `linear-gradient(to left, [오른쪽패널색] 0%, transparent 50%)` |
-| 아래쪽 | `to bottom` | `linear-gradient(to bottom, [위패널색] 0%, transparent 50%)` |
-| 위쪽 | `to top` | `linear-gradient(to top, [아래패널색] 0%, transparent 50%)` |
-
-**구현 패턴**:
-```html
-<div style="position:relative; overflow:hidden;">
-  <img style="width:100%; height:100%; object-fit:cover;">
-  <!-- 인접 패널 색상으로 페이드 — pointer-events:none 필수 -->
-  <div style="position:absolute; inset:0;
-    background:linear-gradient(to right, [인접패널배경색] 0%, transparent 50%);
-    pointer-events:none;"></div>
-</div>
-```
-
-**보더라인 처리**: 그라데이션 블렌드를 사용하는 경우 인접 패널 경계의 `border` 전체(`border-top/right/bottom/left` 모두)를 제거한다. 단축속성(`border:`)으로 설정된 경우도 마찬가지. 보더가 남아 있으면 그라데이션 효과가 무너진다.
-
-**120% 할당 규칙 (Gradient Axis Extension)**:  
-그라데이션 방향축 기준으로 포토 패널의 크기를 원래 할당량의 120%로 늘린다.  
-→ 그라데이션이 사용할 "블리드 존"을 확보해 이미지 콘텐츠 손실을 방지.
-```
-flex 사용 시: flex 값 × 1.2  (예: flex:2 → flex:2.4)
-고정 width 사용 시: width × 1.2
-```
-또한 `margin-left: -8px` (또는 그라데이션 방향 반대쪽 margin)을 추가해  
-flex 경계 렌더링 seam을 그라데이션이 덮도록 약간 오버랩시킨다.
-
-```html
-<!-- 120% 할당 + seam 제거 패턴 (이미지가 오른쪽인 경우) -->
-<div style="flex:2.4; overflow:hidden; position:relative; margin-left:-8px;">
-  <img style="width:100%; height:100%; object-fit:cover;">
-  <div style="position:absolute; inset:0;
-    background:linear-gradient(to right, [인접패널색] 0%, transparent 50%);
-    pointer-events:none;"></div>
-</div>
-```
-
-**페이드 범위 기준**:
-- `30%` — 날카로운 블렌드 (강한 대비 원할 때)
-- `50%` — 자연스러운 블렌드 (기본값 권장)
-- `65%` — 부드러운 블렌드 (이미지를 많이 살리고 싶을 때)
-
-**생성 전 자기 체크에 추가**:
-- [ ] 이미지가 인접 패널과 경계 없이 자연스럽게 연결되는가?
-
----
-
-**전체화면 배경 이미지 — z-index 3레이어 구조 (필수)**
-
-z-index 구조가 없으면 오버레이가 콘텐츠를 덮어 텍스트가 사라진다.
-
-```html
-<section style="position:relative; overflow:hidden;">
-  <img style="position:absolute; inset:0; width:100%; height:100%;
-    object-fit:cover; opacity:0.45; z-index:1; pointer-events:none;">
-  <div style="position:absolute; inset:0;
-    background:rgba(10,15,30,0.75); z-index:2; pointer-events:none;"></div>
-  <div style="position:relative; z-index:3;">
-    <!-- 모든 텍스트/버튼/통계 여기에 -->
-  </div>
-</section>
-```
-
-| 상황 | 이미지 opacity | 오버레이 opacity |
-|------|---------------|-----------------|
-| Cool/Dark 배경 + 어두운 이미지 | 0.35~0.50 | 0.70~0.85 |
-| Warm/Light 배경 + 밝은 이미지 | 0.20~0.35 | 0.55~0.70 |
+**핵심 (생성 시 항상 기억)**:
+- Accent는 슬라이드당 최대 3곳, 전체 덱 Master Accent 1개 고정
+- 전체화면 이미지 사용 시 z-index 3레이어 구조 필수 (이미지 1 / 오버레이 2 / 콘텐츠 3)
 
 ### 슬라이드 구성 비율 규칙 (Composition Rules — 필수 준수)
 
@@ -937,134 +712,7 @@ Body     : 가장 작게        (예: 24px)
 
 ### Cover 장식 패턴 라이브러리
 
-콘텍스트에 맞게 아래 패턴 중 **1개**를 선택. 혼합 금지.
-
----
-
-#### Pattern A — 코너 클러스터 (원/사각형 혼재)
-> 밝은 배경 + 라이트/파스텔 색상. 공공기관·제안서에 적합.
-
-```
-구성:
-  - 4개 모서리에 큰 도형(원 또는 사각형) 배치
-  - 도형 일부가 슬라이드 엣지 밖으로 잘림 (60–100px 오버플로우)
-  - 각 클러스터 = 아웃라인 도형 1 + 면(blur) 도형 1 + 작은 악센트 1–2개
-
-수치 (검증 완료):
-  - 큰 도형 size: 260–300px (모서리에서 90–110px 오버플로우)
-  - 아웃라인: 3px, opacity 0.48–0.55 (밝은 배경에서 선명하게 읽히는 최소치)
-  - 면 + blur: opacity 0.14–0.18, blur 8–10px (형태 유지되는 범위 — 12px 이상 금지)
-  - 작은 악센트: 20–28px, opacity 0.52–0.60
-  - 4개 코너 무게감 균형 필수 — 특정 코너 fill blob이 유난히 크면 opacity 낮추기
-  - 맥락(공공기관·정부): 직선 사각형 + 원 + 아웃라인 (라운딩 박스 지양)
-```
-
----
-
-#### Pattern B — 대형 부유 원 다중 배치
-> 어두운 배경 + 강한 색상 대비. 임팩트 강조, 스타트업/마케팅에 적합.
-
-```
-구성:
-  - 5–8개의 원을 슬라이드 전면에 배치 (크기 다양: 80–300px)
-  - 원 절반 이상이 엣지 밖으로 잘림
-  - 아웃라인 원 + 채움 원 혼재 (같은 색상의 다른 명도)
-  - 배경: 어두운 단색 (#111 / #0D0D0D 등)
-
-수치:
-  - 채움 원: opacity 1.0 (선명, 강한 색)
-  - 아웃라인 원: 2–3px stroke, opacity 0.6–0.8
-  - 색상: 브랜드 컬러 2–3가지 (밝은 계열 + 중간 계열)
-  - 원들이 서로 겹쳐도 OK — 레이어 깊이감 생성
-```
-
----
-
-#### Pattern C — 유기적 웨이브/플루이드 배경
-> 어두운 배경 + 물결 형태 레이어. 고급스럽고 모던한 분위기.
-
-```
-구성:
-  - CSS clip-path polygon 또는 SVG로 물결 형태 레이어 2–3개
-  - 배경 다크 컬러 위에 약간 밝은 동일 계열 색으로 웨이브
-  - 타이틀 영역 아웃라인 사각형 프레임 1개 (선택)
-
-수치:
-  - 웨이브 레이어: opacity 0.3–0.5
-  - 프레임 사각형: border 1–1.5px solid rgba(255,255,255,0.35)
-  - 제목은 흰색, 서브타이틀은 rgba(255,255,255,0.6)
-  - CSS filter: blur() 사용 가능 (웨이브 부드럽게)
-```
-
----
-
-#### Pattern D — 삼각형 클러스터
-> 솔리드 색상 배경 + 기하학적 삼각형. 에너지·마케팅 테마.
-
-```
-구성:
-  - 코너와 엣지에 삼각형 다수 배치 (크기 다양)
-  - 채움 삼각형 + 아웃라인 삼각형 혼재
-  - 배경과 같은 계열 색 + 보색 또는 밝은 노란/오렌지 악센트
-
-수치:
-  - 큰 삼각형: 60–120px, opacity 0.5–0.8
-  - 작은 삼각형: 20–40px, opacity 0.7–1.0
-  - CSS clip-path: polygon(50% 0%, 0% 100%, 100% 100%) 또는 rotate로 방향 변경
-  - 엣지에서 삼각형이 잘려도 OK
-```
-
----
-
-#### Pattern E — 멤피스 마이크로 아이콘
-> 밝은/중립 배경 + 작은 기하 아이콘 산포. 미니멀하고 현대적.
-
-```
-구성:
-  - 5–10개의 작은 도형 아이콘을 슬라이드 전체에 산포
-  - 아이콘 유형: × 마크, ▷▷▷ 쉐브론, 점 그리드(3×3), 아웃라인 삼각형, 아웃라인 원
-  - 모두 아웃라인 또는 면(단색), 그라디언트 없음
-  - 큰 도형 1–2개 (솔리드 채움, 반투명) + 작은 아이콘들
-
-수치:
-  - 아이콘 size: 16–40px
-  - opacity: 0.15–0.35 (배경에 흡수되는 느낌)
-  - 색상: 그레이스케일 또는 브랜드 컬러 단색
-  - 큰 반원/원: opacity 0.2–0.4, 코너에 배치
-```
-
----
-
-#### Pattern F — 톤온톤 대형 아크
-> 솔리드 강한 컬러 배경 + 같은 계열 더 어두운 아크/원호. 세련되고 임팩트.
-
-```
-구성:
-  - 배경: 강한 단색 (파랑 #0037FF, 남색, 딥그린 등)
-  - 코너에 큰 1/4 원호(arc) 또는 C자 반원 2–3개
-  - 도형 색 = 배경보다 15–25% 어두운 동일 색조 (톤온톤)
-  - 작은 × 마크 2–4개를 코너에 배치 (화이트, 소형)
-  - 슬라이드 가장자리에 얇은 수직 텍스트 (선택)
-
-수치:
-  - 아크 도형: 200–400px, overflow OK, opacity 0.6–0.8
-  - × 마크: font-size 20–28px, opacity 0.5–0.7
-  - 제목: 흰색, 굵은 한글 폰트
-  - 배경 대비로 텍스트 가독성 확보 필수
-```
-
----
-
-#### 패턴 선택 기준
-
-| 맥락 | 권장 패턴 |
-|------|-----------|
-| 공공기관·정부 보고서 | Pattern A (라이트 배경) |
-| 스타트업 피치덱 | Pattern A 또는 F |
-| 마케팅·캠페인 | Pattern B 또는 D |
-| 고급 브랜드·Annual Report | Pattern C 또는 F |
-| 미니멀 비즈니스 | Pattern E |
-| 강렬한 색상 브랜드 | Pattern B 또는 F |
+콘텍스트에 맞는 장식 패턴을 커버에 적용한다 — **혼합 금지**. 패턴 6종(A 코너 클러스터 / B 부유 원 / C 웨이브 / D 삼각형 / E 멤피스 / F 톤온톤 아크) + 맥락별 선택 기준은 `references/cover-patterns.md` 참조.
 
 ### 카드/컬럼 레이아웃 height 채우기 패턴 (필수)
 
@@ -1213,92 +861,7 @@ v3 커버: [레이아웃] × [비율] × [경계표현]
 |------|------|
 | "PDF로" | `window.print()` 안내 + 각 슬라이드 분리 HTML |
 | "Figma로" | Figma Console MCP로 프레임 생성 |
-| "PPTX로" | **Step 5 실행** → python-pptx로 실제 .pptx 파일 생성 |
+| "PPTX로" | 메인이 `slide-pptx-agent` 호출 — python-pptx로 .pptx 파일 생성 |
 | "React로" | 컴포넌트 코드 핸드오프 |
 
----
-
-## Step 5: PPTX 변환 (선택 단계 — "PPTX로" 요청 시)
-
-HTML 슬라이드가 완성되면 `tools/pptx_export.py` + `tools/pptx_utils.py`로 실제 PowerPoint 파일을 생성한다.
-
-### 구조
-
-```
-tools/
-  pptx_utils.py    — PptxBuilder 클래스, DesignSystem, build_pptx() 진입점
-  pptx_export.py   — 슬라이드 빌더 함수들, build() 진입점
-```
-
-### 신규 프레젠테이션 작성 패턴
-
-```python
-# my_slides.py
-from pptx.util import Inches, Pt
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
-from pptx_utils import DesignSystem, PptxBuilder, build_pptx
-from pptx.dml.color import RGBColor
-
-# 1. 디자인 시스템 정의 (기본값 override)
-ds = DesignSystem(
-    colors={
-        **DesignSystem().colors,          # 기본 팔레트 유지
-        'v': RGBColor(0x00, 0x7A, 0xFF),  # accent 색상만 교체
-    }
-)
-
-# 2. 슬라이드 빌더 함수 정의 (시그니처: prs, b)
-def cover(prs, b: PptxBuilder):
-    sl = b.blank(prs)
-    b.set_bg(sl, b.C['fg'])
-    b.add_mixed(sl, Inches(1), Inches(2), Inches(8), Inches(1.5),
-        [[('제목', b.C['w'])]], size=48, align=PP_ALIGN.CENTER)
-    b.pn(sl, 1, 3, dark_bg=True)
-
-def content(prs, b: PptxBuilder):
-    sl = b.blank(prs)
-    b.set_bg(sl, b.C['bg'])
-    CW = b.W - 2 * b.M
-    y = b.badge(sl, b.M, Inches(0.5), 'Chapter 01', b.C['v'])
-    b.add_txt(sl, b.M, y, CW, Inches(0.5), '내용', size=24, bold=True)
-    b.pn(sl, 2, 3)
-
-# 3. 빌드
-build_pptx([cover, content], output='D:/tmp/output.pptx', ds=ds)
-```
-
-### HTML → PPTX 변환 체크리스트
-
-각 슬라이드를 변환할 때 `references/pptx-alignment-patterns.md`의 규칙 적용:
-
-- [ ] oval/shape과 나란한 textbox에 `anchor=MSO_ANCHOR.MIDDLE` 적용
-- [ ] 동일 Y 배치 시 textbox 높이 = shape 높이로 맞춤
-- [ ] pill/badge textbox에 `anchor=MSO_ANCHOR.MIDDLE` 적용
-- [ ] 좌측 컬러 바 두께 최소 `Inches(0.05)` 이상
-- [ ] emoji 아이콘 textbox에 `font='Segoe UI Emoji'` 명시
-
-### 검증 파이프라인
-
-```bash
-# 1. PPTX 생성
-python tools/pptx_export.py         # D:/tmp/slides_v4.pptx 생성
-
-# 2. HTML 스크린샷 캡처
-python tools/capture_compare.py
-
-# 3. PPTX → PNG 변환 (PowerShell)
-# (PowerShell에서 실행)
-$ppt = New-Object -ComObject PowerPoint.Application
-$ppt.Visible = 1
-$prs = $ppt.Presentations.Open("D:\tmp\slides_v4.pptx")
-$prs.SaveAs("D:\tmp\pptx_png", 17)   # 17 = ppSaveAsPNG
-$prs.Close(); $ppt.Quit()
-
-# 4. 비교 이미지 생성
-python tools/make_compare.py
-```
-
-### 보정값 참조
-
-- 상세 패턴: `references/pptx-alignment-patterns.md`
-- 핵심 요약: `references/pptx-alignment-patterns.md#핵심-원칙`
+> PPTX 변환 상세 절차는 `agents/slide-pptx-agent.md` 참조.

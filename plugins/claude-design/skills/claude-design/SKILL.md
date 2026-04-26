@@ -21,6 +21,7 @@ ProjectPlanner → DesignSystemManager → Generator(모드별) → VisualRefine
                                        │
                                        ├─ ① prototype-agent
                                        ├─ ② slide-deck-agent → slide-qa-agent (자동)
+                                       │     └─ slide-pptx-agent (선택 — "PPTX로" 요청 시)
                                        ├─ ③ template-agent
                                        ├─ ④ other-agent
                                        └─ ⑤ document-agent
@@ -56,6 +57,10 @@ STEP 3. 모드별 에이전트 위임 (Agent tool 호출 — 5모드 통일)
   ⑤ Document      → Agent tool 호출 (subagent_type: "document-agent")
 
 STEP 4. 결과물 핸드오프 (사용자에게 전달)
+
+STEP 5 (선택 — "PPTX로" 요청 시). slide-pptx-agent 위임 (Agent tool 호출 — subagent_type: "slide-pptx-agent")
+  → 입력: 완성된 HTML 슬라이드 경로 + DESIGN_SYSTEM (pptx_mode: true 전제)
+  → 산출: .pptx 파일 (편집 가능한 PowerPoint)
 ```
 
 **큰 방향 변경 시 예외**: 사용자가 "컨셉 자체 다시" 같은 큰 변경을 요청하면 메인이 STEP 2로 돌아가 DSM 재호출. 부분 수정·시각 미세 조정은 sub-agent 안에서 처리.
