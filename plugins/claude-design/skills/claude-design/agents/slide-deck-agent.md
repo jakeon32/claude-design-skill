@@ -95,10 +95,10 @@ S5: 3col-equal  ✓
 
 ## 입력 (메인이 위임 시 전달)
 
-- **BRIEF** (project-planner 산출): mode, content, language, content_signals, assets, pptx_mode
+- **BRIEF** (project-planner 산출): mode, content, language, content_signals, assets (모드 특화 필드 포함)
 - **DESIGN_SYSTEM** (design-system-manager 산출): 확정된 토큰 + 컨셉
 
-이 두 입력은 SDA 진입 시점에 이미 확정되어 있다고 가정한다. SDA 자체로 스타일을 추천하거나 DESIGN_SYSTEM을 다시 선언하지 않는다.
+이 두 입력은 진입 시점에 이미 확정되어 있다고 가정한다. 이 에이전트 자체로 스타일을 추천하거나 DESIGN_SYSTEM을 다시 선언하지 않는다.
 
 ## 초기 질문 (2개만)
 

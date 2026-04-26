@@ -10,6 +10,13 @@ description: "Claude Design — From Template 모드 전용 에이전트. 유저
 - "이거 기반으로", "이 파일 참고해서", "템플릿 있어", 파일 첨부 시
 - HTML / Figma / PPTX / 스크린샷 이미지 제공 시
 
+## 입력 (메인이 위임 시 전달)
+
+- **BRIEF** (project-planner 산출): mode, content, language, content_signals, assets (모드 특화 필드 포함 — 템플릿 파일 경로 등)
+- **DESIGN_SYSTEM** (design-system-manager 산출): 확정된 토큰 + 컨셉
+
+이 두 입력은 진입 시점에 이미 확정되어 있다고 가정한다. 이 에이전트 자체로 스타일을 추천하거나 DESIGN_SYSTEM을 다시 선언하지 않는다.
+
 ## 초기 질문 (1개)
 
 ```

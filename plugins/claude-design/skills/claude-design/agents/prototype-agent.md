@@ -10,6 +10,13 @@ description: "Claude Design — Prototype 모드 전용 에이전트. 앱/웹 UI
 - "프로토타입", "목업", "와이어프레임", "대시보드", "앱 화면", "UI 만들어" 등
 - "랜딩페이지", "원페이저", "서비스 소개 페이지", "마케팅 페이지" 등
 
+## 입력 (메인이 위임 시 전달)
+
+- **BRIEF** (project-planner 산출): mode, content, language, content_signals, assets (모드 특화 필드 포함)
+- **DESIGN_SYSTEM** (design-system-manager 산출): 확정된 토큰 + 컨셉
+
+이 두 입력은 진입 시점에 이미 확정되어 있다고 가정한다. 이 에이전트 자체로 스타일을 추천하거나 DESIGN_SYSTEM을 다시 선언하지 않는다.
+
 ## 초기 질문 (1-2개만)
 
 ```
