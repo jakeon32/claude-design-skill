@@ -466,6 +466,8 @@ HTML 파일 저장 직후, 스크린샷을 찍기 **전에** 아래 항목을 **
 □ Accent ≤ 3곳/슬라이드?
 □ 폰트 계층 Title:Subtitle:Body ≈ 3:2:1?
 □ 본문 최소 16px?
+□ 인라인 rgba(255,255,255,X) / rgba(0,0,0,X) 0건? — grep으로 카운트, 0이어야 함
+□ :root alpha 토큰(muted/muted-2/border/border-2/ghost) 모두 color-mix 기반 정의?
 
 [본문 슬라이드 vertical 분포 — 상단 쏠림 방지]
 □ 본문 wrapper에 `justify-content:space-between` 또는 vertical 3-zone 분배 적용?
@@ -713,13 +715,33 @@ document.addEventListener('keydown', e => {
 }
 ```
 
-**alpha 변형 처리** — `rgba(...)` 직접 금지. `color-mix` 사용 의무:
-```css
-/* ❌ 금지 — primary 변경 시 alpha 변형이 따라가지 못함 */
-background: rgba(61, 112, 104, 0.04);
+**alpha 변형 처리 (강제 의무)** — `rgba(...)` 직접 사용 절대 금지. `:root` 토큰 정의·인라인 style 양쪽 모두 `color-mix(in srgb, var(--c-text) X%, transparent)` 의무:
 
-/* ✅ 의무 — 변수 변경 시 alpha 변형도 자동 추적 */
-background: color-mix(in srgb, var(--c-primary) 4%, transparent);
+```css
+/* ❌ 금지 — :root 토큰 정의에 rgba 사용 */
+--c-muted: rgba(255,255,255,0.40);
+
+/* ❌ 금지 — 인라인 style에 rgba 사용 */
+<p style="color:rgba(255,255,255,0.78);">본문</p>
+
+/* ✅ 의무 — :root 토큰을 var(--c-text) 기반 color-mix로 정의 */
+--c-muted:    color-mix(in srgb, var(--c-text) 40%, transparent);
+--c-muted-2:  color-mix(in srgb, var(--c-text) 18%, transparent);
+--c-border:   color-mix(in srgb, var(--c-text) 5%, transparent);
+--c-border-2: color-mix(in srgb, var(--c-text) 12%, transparent);
+--c-ghost:    color-mix(in srgb, var(--c-text) 4.5%, transparent);
+
+/* ✅ 의무 — 인라인 alpha도 color-mix */
+<p style="color:color-mix(in srgb, var(--c-text) 78%, transparent);">본문</p>
+```
+
+**왜 강제인가**: 인라인 `rgba(255,255,255,0.78)`은 white 베이스에 hardcode됨. Color Tuner의 Randomize로 라이트 팔레트(Swiss Minimal·Bold Editorial 등)로 전환 시 `--c-text`는 dark로 swap되지만 hardcode rgba는 그대로 white → 라이트 배경 위 흰 글씨로 가독성 0. color-mix만 `--c-text` 변경을 자동 추적해 라이트↔다크 전환 정상 작동.
+
+**자가검수에 추가**:
+```
+[색상 토큰화 강제]
+□ 인라인 rgba(255,255,255,X) / rgba(0,0,0,X) 0건? — grep 결과 0이어야 함
+□ :root의 alpha 토큰(muted/muted-2/border/border-2/ghost) 모두 color-mix 표현?
 ```
 
 → `color-mix`는 모던 브라우저 지원(Chrome 111+ / Safari 16.2+). PPTX 변환 시 slide-pptx-agent가 자동 호환 처리.

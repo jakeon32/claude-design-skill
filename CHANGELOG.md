@@ -12,7 +12,7 @@ Claude Design Skill의 변경 이력. 형식은 [Keep a Changelog](https://keepa
 
 - **쇼케이스 임계값 제거** — "10장 이상 시 필수" → 슬라이드 수 무관 모든 덱 의무. 짧은 덱에서도 커버 인상·본문 톤 비교 검증 가치 있음.
 - **본문 슬라이드 vertical 분포 패턴** — 720px 캔버스에서 상단 쏠림 방지를 위해 `justify-content:space-between` 또는 3-zone(top·middle·bottom) 분배 의무. 자가검수에 "vertical 분포 균형" 항목 추가. bottom meta row는 커버 금지·본문 권장으로 명문화.
-- (후속 commit) color-mix 의무 강화 — 인라인 rgba(255,255,255,X) hardcode 금지 + 자가검수
+- **color-mix 의무 강화** — `:root` 토큰뿐 아니라 **인라인 style의 rgba(255,255,255,X) / rgba(0,0,0,X)도 절대 금지** 명문화. 자가검수에 "인라인 rgba 0건" + ":root alpha 토큰 color-mix 기반" 두 항목 추가. 위반 사고 사례(Color Tuner Randomize 라이트 팔레트 전환 시 hardcode white text 가독성 0) 명시.
 - (후속 commit) 고정 inverse panel 위 텍스트 anchor 패턴
 
 ### Phase 6 (2026-04-27): 4모드 구조 + 잔재 일괄 폐기
