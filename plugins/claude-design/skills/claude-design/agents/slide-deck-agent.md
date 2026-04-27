@@ -381,10 +381,21 @@ Expression 다양성 체크: ✓ panel 40% 이하 / ✓ 연속 동일 없음
 ```
 1. 시각적으로 가장 다른 3장 선택
    (예: Cover/Title + Data 슬라이드 + Statement, 또는 Cover + Feature Cards + Mockup)
-2. 3장만 완성도 있게 생성 → 스크린샷
-3. 사용자 확인: "이 방향으로 나머지 진행할까요?"
-4. 확인 후 전체 슬라이드 생성
+2. 3장만 완성도 있게 생성 → showcase.html (단일 active 토글 형태)
+3. 각 슬라이드 개별 스크린샷 (Playwright 또는 Chrome DevTools)
+4. **3-up grid HTML 생성** → showcase-grid.html
+   (iframe 3개로 showcase.html을 임베드, 각 iframe에서 .slide N번째에 .active 활성)
+   → 사용자가 3장을 한 화면에서 동시에 비교 가능 (컨셉 검토용)
+5. 풀페이지 스크린샷 (showcase-grid.png)
+6. 사용자 컨펌 요청 — grid HTML 경로 + grid PNG 함께 전달
+7. 방향 NG → 3장 재작업·재컨펌 / 방향 OK → 전체 슬라이드 생성
 ```
+
+**산출물 경로 컨벤션** (작업 디렉토리 기준):
+- `showcase.html` — 3장 통합 단일 active 토글 (키보드 네비)
+- `showcase-grid.html` — 3-up grid 동시 표시 (컨셉 검토용)
+- `slide-01.png` ~ `slide-03.png` — 개별 슬라이드 스크린샷
+- `showcase-grid.png` — 3-up grid 풀페이지 스크린샷
 
 10장 미만이면 바로 전체 생성 가능.
 
