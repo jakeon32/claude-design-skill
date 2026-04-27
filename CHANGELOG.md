@@ -13,7 +13,8 @@ Claude Design Skill의 변경 이력. 형식은 [Keep a Changelog](https://keepa
 - **쇼케이스 임계값 제거** — "10장 이상 시 필수" → 슬라이드 수 무관 모든 덱 의무. 짧은 덱에서도 커버 인상·본문 톤 비교 검증 가치 있음.
 - **본문 슬라이드 vertical 분포 패턴** — 720px 캔버스에서 상단 쏠림 방지를 위해 `justify-content:space-between` 또는 3-zone(top·middle·bottom) 분배 의무. 자가검수에 "vertical 분포 균형" 항목 추가. bottom meta row는 커버 금지·본문 권장으로 명문화.
 - **color-mix 의무 강화** — `:root` 토큰뿐 아니라 **인라인 style의 rgba(255,255,255,X) / rgba(0,0,0,X)도 절대 금지** 명문화. 자가검수에 "인라인 rgba 0건" + ":root alpha 토큰 color-mix 기반" 두 항목 추가. 위반 사고 사례(Color Tuner Randomize 라이트 팔레트 전환 시 hardcode white text 가독성 0) 명시.
-- (후속 commit) 고정 inverse panel 위 텍스트 anchor 패턴
+- **고정 inverse panel 위 텍스트 anchor 패턴** — clip-path / linear-gradient 등 hardcoded inverse panel이 슬라이드 안에 있을 때 그 panel 위 텍스트는 `--c-text` 추적 금지. panel 색상이 fixed면 그 위 텍스트도 fixed light/dark 색상(예: `#F0F0F0` 또는 `color-mix(in srgb, #FFFFFF X%, transparent)`)으로 anchor. 자가검수에 "inverse panel 텍스트 anchor 일관성" 항목 추가.
+- **Color Tuner 구현 주의 (applyAllFromState)** — alpha 토큰은 setProperty 대상에서 제외(HEX 토큰만 적용), localStorage saved default 로드 시도 alpha 토큰 무시. legacy rgba 캐시 방지 + `:root` color-mix가 var(--c-text) 변경을 자동 추적하도록 보장.
 
 ### Phase 6 (2026-04-27): 4모드 구조 + 잔재 일괄 폐기
 

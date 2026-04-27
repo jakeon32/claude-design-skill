@@ -748,6 +748,43 @@ document.addEventListener('keydown', e => {
 
 ---
 
+#### 고정 inverse panel 위 텍스트 — anchor 패턴 (예외 처리)
+
+슬라이드가 단일 background(`var(--c-bg)`)만 쓰면 위 color-mix 토큰화로 라이트↔다크 자동 전환 가능. 그러나 **slide 안에 hardcoded inverse panel**(diagonal clip-path dark gradient, photo overlay zone, photo-split bg 등)이 있으면 그 panel 위 텍스트는 단일 `--c-text` 추적으로 처리 불가 — panel 색상이 fixed면 그 위 텍스트도 fixed로 anchor 필요.
+
+**진단 신호**:
+- `clip-path:polygon(...)`로 영역 분할 + 그 영역에 hardcoded `linear-gradient(..., #050505, #0A0A0A)` 같은 고정 색상 사용
+- photo placeholder/overlay zone (Photo Panel Gradient Blend 등)
+- 라이트 팔레트 적용 시 그 panel 위 텍스트(`--c-text` 추적)가 panel 색상과 같아져 invisible
+
+**처방 — panel 색상이 hardcoded면 그 위 텍스트도 hardcoded**:
+
+```html
+<!-- 슬라이드 안에 hardcoded dark diagonal panel -->
+<div style="position:absolute;inset:0;
+  background:linear-gradient(135deg, #0A0A0A 0%, #050505 100%);
+  clip-path:polygon(0 0, 58% 0, 38% 100%, 0 100%);"></div>
+
+<!-- ❌ 문제 — 라이트 팔레트로 swap 시 hero = dark, panel도 dark → invisible -->
+<p class="hero-typo">FIVE<br><span style="color:var(--c-accent);">strategies</span></p>
+
+<!-- ✅ 해결 — panel 위 텍스트는 hardcoded light 색상 (panel이 항상 dark이므로) -->
+<p class="hero-typo" style="color:#F0F0F0;">FIVE<br>...</p>
+<p style="color:color-mix(in srgb, #FFFFFF 50%, transparent);">muted desc</p>
+<p class="label" style="color:color-mix(in srgb, #FFFFFF 45%, transparent);">bottom label</p>
+```
+
+**원칙**: panel 색상이 hardcoded면 그 위 텍스트도 hardcoded. 일관성 = 팔레트 swap 시에도 panel + 텍스트 페어링 유지. accent 색상(orange/red)은 양쪽 zone에서 모두 visible하므로 그대로 `var(--c-accent)` OK.
+
+**자가검수에 추가**:
+```
+[고정 inverse panel 텍스트 anchor]
+□ clip-path / linear-gradient hardcoded inverse panel 존재 시 — panel 위 텍스트가 var(--c-text) / var(--c-muted)를 그대로 쓰지 않는가? (hardcoded 색상 또는 white/black 기반 color-mix 사용)
+□ panel 색상과 그 위 텍스트의 anchor가 일관되는가? (둘 다 hardcoded 또는 둘 다 토큰)
+```
+
+---
+
 #### Color Tuner — 사용자 인터랙티브 색상 조정 (`color-tuner.html`)
 
 deck.html 완성 시 **별도 자체 완결형 HTML** `color-tuner.html`을 자동 생성. 사용자가 슬라이드 디자인 그대로 두고 색상만 조정하고 싶을 때 이 페이지로 진입.
@@ -769,6 +806,36 @@ input.addEventListener('input', e => {
 });
 ```
 → 픽커 변경 즉시 좌측 미리보기 모든 슬라이드 색상 갱신.
+
+**구현 주의 — applyAllFromState는 HEX 토큰만 setProperty**:
+
+state에 모든 토큰을 담더라도 `applyAllFromState`(또는 동등 일괄 적용 함수)는 **HEX 토큰(bg/footer/text/primary/accent/accent-2)만 setProperty**해야 한다. alpha 토큰(muted/muted-2/border/border-2/ghost)을 setProperty로 명시하면 `:root`에 정의된 `color-mix(in srgb, var(--c-text) X%, transparent)` 표현이 인라인 값으로 덮어씌워져 `--c-text` 변경 추적이 끊긴다.
+
+```js
+// ❌ 사고 — alpha 토큰까지 setProperty하면 :root color-mix가 무력화됨
+function applyAllFromState(){
+  Object.keys(state).forEach(k => {
+    document.documentElement.style.setProperty('--' + k, state[k]);
+  });
+}
+
+// ✅ 올바름 — HEX 토큰만 setProperty, alpha 토큰은 :root color-mix가 자동 처리
+function applyAllFromState(){
+  HEX_TOKENS.forEach(k => {
+    document.documentElement.style.setProperty('--' + k, state[k]);
+  });
+}
+```
+
+같은 이유로 **localStorage saved default 로드 시 alpha 토큰 무시**:
+```js
+const saved = JSON.parse(raw);
+const savedHex = {};
+HEX_TOKENS.forEach(k => { if (saved[k]) savedHex[k] = saved[k]; });
+state = {...ORIGINAL_DEFAULTS, ...savedHex};
+```
+
+이전 세션의 legacy rgba 캐시가 남아있어도 alpha 토큰은 항상 ORIGINAL_DEFAULTS의 color-mix 표현으로 시작 → Randomize 시 라이트↔다크 자동 전환 정상 작동.
 
 **브라우저 자동 실행 (deck.html 완성 직후)**:
 ```bash
