@@ -6,6 +6,15 @@ Claude Design Skill의 변경 이력. 형식은 [Keep a Changelog](https://keepa
 
 ## [Unreleased] — v3 진행 중
 
+### Phase 6.1 (2026-04-27): 실 빌드 테스트 기반 robustness 패턴 (4건 fix)
+
+테스트 덱(AI 인플루언서 프롬프트 매뉴얼·9장 Digital Luxury Editorial) 빌드 + Color Tuner 라이트/다크 팔레트 randomize 검증 과정에서 발견된 4건 수정:
+
+- **쇼케이스 임계값 제거** — "10장 이상 시 필수" → 슬라이드 수 무관 모든 덱 의무. 짧은 덱에서도 커버 인상·본문 톤 비교 검증 가치 있음.
+- (후속 commit) 본문 슬라이드 vertical 분포 패턴 + 자가검수 항목
+- (후속 commit) color-mix 의무 강화 — 인라인 rgba(255,255,255,X) hardcode 금지 + 자가검수
+- (후속 commit) 고정 inverse panel 위 텍스트 anchor 패턴
+
 ### Phase 6 (2026-04-27): 4모드 구조 + 잔재 일괄 폐기
 
 **구조 변경**:
