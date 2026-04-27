@@ -387,8 +387,14 @@ Expression 다양성 체크: ✓ panel 40% 이하 / ✓ 연속 동일 없음
    (iframe 3개로 showcase.html을 임베드, 각 iframe에서 .slide N번째에 .active 활성)
    → 사용자가 3장을 한 화면에서 동시에 비교 가능 (컨셉 검토용)
 5. 풀페이지 스크린샷 (showcase-grid.png)
-6. 사용자 컨펌 요청 — grid HTML 경로 + grid PNG 함께 전달
-7. 방향 NG → 3장 재작업·재컨펌 / 방향 OK → 전체 슬라이드 생성
+6. **브라우저에서 showcase-grid.html 자동 실행** (필수)
+   - Windows: `cmd.exe //c start "" "{path}/showcase-grid.html"` 또는 `explorer.exe "{path}\\showcase-grid.html"`
+   - Mac:     `open "{path}/showcase-grid.html"`
+   - Linux:   `xdg-open "{path}/showcase-grid.html"`
+   → 사용자가 PNG 캡처가 아닌 실제 브라우저 창에서 인터랙티브하게 검토
+7. 사용자 컨펌 요청 — grid HTML 경로 + grid PNG 함께 전달
+8. 방향 NG → 3장 재작업·재컨펌 → **재작업 시에도 브라우저 자동 띄우기 의무**
+   방향 OK → 전체 슬라이드 생성
 ```
 
 **산출물 경로 컨벤션** (작업 디렉토리 기준):
