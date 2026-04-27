@@ -371,37 +371,55 @@ Expression 다양성 체크: ✓ panel 40% 이하 / ✓ 연속 동일 없음
 
 ## Step 2: HTML 슬라이드 생성 (기본 출력)
 
-### 3-page Showcase 규칙 (10장 이상 시 필수)
+### Showcase 규칙 (10장 이상 시 필수) — Cover 3안 + 본문 2안 = 5장
 
-전체 생성 전 시각적으로 가장 다른 3장을 미리 만들어 방향 확인.
-방향 OK → 본 작업, 방향 NG → 3장 재작업·재컨펌 후 본 작업.
+**왜 커버 3안이 본문보다 많은가**: 커버는 발표의 첫인상·전체 톤을 결정하는 가장 중요한 슬라이드. 본문 톤은 한 번 결정되면 13장 일관 적용되지만, 커버는 레이아웃·비율·경계 표현 조합에 따라 인상이 크게 달라지므로 3가지 변형을 비교해 사용자가 선택해야 한다. 본문은 2가지 톤(예: 표 vs 타임라인)으로 그리드 다양성만 검증.
+
+전체 생성 전 컨셉 비교용 5장을 미리 만들어 방향 확인.
+방향 OK → 본 작업, 방향 NG → 5장 재작업·재컨펌 후 본 작업.
 
 슬라이드가 10장 이상이면 전체를 바로 생성하지 않는다:
 
 ```
-1. 시각적으로 가장 다른 3장 선택
-   (예: Cover/Title + Data 슬라이드 + Statement, 또는 Cover + Feature Cards + Mockup)
-2. 3장만 완성도 있게 생성 → showcase.html (단일 active 토글 형태)
-3. 각 슬라이드 개별 스크린샷 (Playwright 또는 Chrome DevTools)
-4. **3-up grid HTML 생성** → showcase-grid.html
-   (iframe 3개로 showcase.html을 임베드, 각 iframe에서 .slide N번째에 .active 활성)
-   → 사용자가 3장을 한 화면에서 동시에 비교 가능 (컨셉 검토용)
+1. Cover 3가지 안 선택 (cover-layouts.md 3축 조합이 모두 다른 변형 3개)
+   - 축: 레이아웃(1-col / 2-col / 사선) × 비율(1:1 / 1:2 / 2:1 / 3:1) × 경계 표현(면 / 선 / 여백)
+   - 동일 조합 금지 — 축 중 하나 이상 반드시 다르게
+   - 예: Cover-A 2-col 40:60 면 / Cover-B 1-col 전면 여백 / Cover-C 사선 clip-path 면+선
+
+2. 본문 2가지 안 선택 (시각적으로 가장 다른 본문 슬라이드 2장)
+   - 그리드/표현 다양성 — 표 + 타임라인, 또는 카드 그리드 + Statement
+   - 본문 콘텐츠는 13장 매핑 중 핵심 2장에서 선택
+
+3. 5장 모두 완성도 있게 생성
+   → showcase.html (단일 active 토글 형태, 키보드 네비)
+   → 각 슬라이드 개별 스크린샷 (Playwright 또는 Chrome DevTools)
+
+4. **5-up grid HTML 생성** → showcase-grid.html
+   - **iframe 사용 금지** — file:// cross-origin 정책으로 사용자 브라우저에서 iframe.contentDocument 접근 차단됨
+   - .slide 5개 HTML·CSS를 grid HTML에 **직접 박아넣고** transform: scale(N)로 1280×720을 grid 셀에 맞게 축소
+   - Layout: 위 row 3열(Cover-A / Cover-B / Cover-C) + 아래 row 2열(Body-1 / Body-2)
+   - 각 슬라이드 캡션: "S1 Cover-A · 2-col 40:60" 같이 변형 정보 포함
+
 5. 풀페이지 스크린샷 (showcase-grid.png)
+
 6. **브라우저에서 showcase-grid.html 자동 실행** (필수)
    - Windows: `cmd.exe //c start "" "{path}/showcase-grid.html"` 또는 `explorer.exe "{path}\\showcase-grid.html"`
    - Mac:     `open "{path}/showcase-grid.html"`
    - Linux:   `xdg-open "{path}/showcase-grid.html"`
    → 사용자가 PNG 캡처가 아닌 실제 브라우저 창에서 인터랙티브하게 검토
+
 7. 사용자 컨펌 요청 — grid HTML 경로 + grid PNG 함께 전달
-8. 방향 NG → 3장 재작업·재컨펌 → **재작업 시에도 브라우저 자동 띄우기 의무**
-   방향 OK → 전체 슬라이드 생성
+   - "Cover-A/B/C 중 어느 안으로 갈지" + "본문 톤 OK인지" 두 가지 결정 받기
+
+8. 방향 NG → 5장 재작업·재컨펌 → **재작업 시에도 브라우저 자동 띄우기 의무**
+   방향 OK → 선택한 Cover 안으로 전체 13장 생성
 ```
 
 **산출물 경로 컨벤션** (작업 디렉토리 기준):
-- `showcase.html` — 3장 통합 단일 active 토글 (키보드 네비)
-- `showcase-grid.html` — 3-up grid 동시 표시 (컨셉 검토용)
-- `slide-01.png` ~ `slide-03.png` — 개별 슬라이드 스크린샷
-- `showcase-grid.png` — 3-up grid 풀페이지 스크린샷
+- `showcase.html` — 5장 통합 단일 active 토글 (키보드 네비)
+- `showcase-grid.html` — 5-up grid 동시 표시 (iframe 없이 직접 박아넣기)
+- `slide-01.png` (Cover-A) ~ `slide-05.png` (Body-2) — 개별 슬라이드 스크린샷
+- `showcase-grid.png` — 5-up grid 풀페이지 스크린샷
 
 10장 미만이면 바로 전체 생성 가능.
 
