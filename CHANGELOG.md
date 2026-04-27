@@ -11,7 +11,7 @@ Claude Design Skill의 변경 이력. 형식은 [Keep a Changelog](https://keepa
 테스트 덱(AI 인플루언서 프롬프트 매뉴얼·9장 Digital Luxury Editorial) 빌드 + Color Tuner 라이트/다크 팔레트 randomize 검증 과정에서 발견된 4건 수정:
 
 - **쇼케이스 임계값 제거** — "10장 이상 시 필수" → 슬라이드 수 무관 모든 덱 의무. 짧은 덱에서도 커버 인상·본문 톤 비교 검증 가치 있음.
-- (후속 commit) 본문 슬라이드 vertical 분포 패턴 + 자가검수 항목
+- **본문 슬라이드 vertical 분포 패턴** — 720px 캔버스에서 상단 쏠림 방지를 위해 `justify-content:space-between` 또는 3-zone(top·middle·bottom) 분배 의무. 자가검수에 "vertical 분포 균형" 항목 추가. bottom meta row는 커버 금지·본문 권장으로 명문화.
 - (후속 commit) color-mix 의무 강화 — 인라인 rgba(255,255,255,X) hardcode 금지 + 자가검수
 - (후속 commit) 고정 inverse panel 위 텍스트 anchor 패턴
 

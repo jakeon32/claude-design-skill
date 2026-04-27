@@ -467,10 +467,64 @@ HTML 파일 저장 직후, 스크린샷을 찍기 **전에** 아래 항목을 **
 □ 폰트 계층 Title:Subtitle:Body ≈ 3:2:1?
 □ 본문 최소 16px?
 
+[본문 슬라이드 vertical 분포 — 상단 쏠림 방지]
+□ 본문 wrapper에 `justify-content:space-between` 또는 vertical 3-zone 분배 적용?
+□ 콘텐츠 시각 무게가 한쪽 영역(특히 상단)에 50% 이상 쏠려있지 않은가?
+   - 진단: 본문 컬럼 콘텐츠 높이 < 가용 캔버스(720 - 56*2 - 50 ≈ 558px)의 50%
+   - 처방: top zone(라벨+hero+body) / middle zone(quote·stat·sub-callout) / bottom zone(meta·effect row) 3-zone 분배
+
 → 하나라도 ✗이면 **즉시 재빌드 의무** (스크린샷·사용자 보고 모두 금지).
 → 재빌드 후 재검수 → 모두 ✓ 통과 후에만 스크린샷.
 → 사용자 보고 시 자가검수 결과는 실제 카운트 숫자(예: "텍스트 블록: 2개 ✓")로 명시.
 ```
+
+---
+
+### 본문 슬라이드 — vertical 분포 패턴 (필수)
+
+본문 슬라이드(label row + body grid 구조)가 720px 캔버스에서 상단으로 쏠리지 않도록 **vertical 3-zone 분배** 또는 `justify-content:space-between` 의무.
+
+**진단 신호**:
+- 본문 컬럼 콘텐츠 높이 < 가용 캔버스 높이의 50% (720 - 56·2 padding - 50 utility row ≈ 558px 가용)
+- `align-items: start` + flex column gap 만으로 stacking → 하단 무인지대 발생
+- 각 컬럼의 top 그룹과 bottom anchor만 있고 middle 비어있음 → 위·아래 양극화
+
+**처방 — 3-zone vertical distribution**:
+
+```
+TOP zone     — primary statement (label + hero + body)
+MIDDLE zone  — secondary content (quote · stat · accent line · sub-callout)
+BOTTOM zone  — meta·effect row (label + accent rule + supplementary)
+```
+
+**구현 패턴**:
+
+```html
+<!-- ❌ 문제 — 상단 stacking, 하단 빈 공간 -->
+<div style="flex:1;display:grid;grid-template-columns:40fr 60fr;align-items:start;">
+  <div>...</div>
+  <div style="display:flex;flex-direction:column;gap:24px;">...</div>
+</div>
+
+<!-- ✅ 해결 — 각 컬럼 wrapper에 space-between + bottom meta row 추가 -->
+<div style="flex:1;display:grid;grid-template-columns:40fr 60fr;">
+  <div style="display:flex;flex-direction:column;justify-content:space-between;">
+    <div>...top content...</div>
+    <div style="border-top:1px solid var(--c-border-2);padding-top:14px;">
+      <p class="label">FIG. 01 · BOTTOM META</p>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;justify-content:space-between;">
+    <p class="hero">...top quote...</p>
+    <div>...middle so-what...</div>
+    <div>...bottom citation row...</div>
+  </div>
+</div>
+```
+
+**bottom meta row 규칙**:
+- 커버에선 메타 row 0개 (커버 자가검수의 "메타 row 0개?" 항목 참조)
+- **본문 슬라이드에선 권장** — 단일 정보 1줄(label + accent rule + supplementary). 정보 나열 ≥2개는 여전히 금지
 
 ---
 
