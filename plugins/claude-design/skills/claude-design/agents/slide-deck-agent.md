@@ -490,6 +490,7 @@ HTML 파일 저장 직후, 스크린샷을 찍기 **전에** 아래 항목을 **
 - 스피커 노트 토글: `S` 키 (ON일 때)
 - 풀스크린: `F` 키 (토글)
 - **16:9 고정 캔버스**: 1280×720 고정 크기 + CSS scale transform
+- **색상 토큰화 (필수)**: 모든 색상은 `:root` CSS 변수로 정의 — 인라인 hex 금지. 자세한 절차는 아래 "색상 토큰화 + Color Tuner" 섹션 참조.
 
 ### 16:9 스케일링 필수 패턴
 
@@ -640,6 +641,79 @@ document.addEventListener('keydown', e => {
 - 폰트 우선순위 → 스타일 파일 지정 폰트 > **Pretendard** (한국어 기본)
 - 한국어 → `references/korean-typography.md` 자동 적용
 - 스타일 정의 → `references/styles/[style].md` 로드 후 주입
+
+### 색상 토큰화 (필수) + Color Tuner 자동 생성
+
+**색상 토큰화 의무**: 모든 색상은 `:root` CSS 변수로 정의. 인라인 `#hex` 또는 `rgb(...)` 직접 사용 금지. 변수 한 군데 변경으로 N장 전체에 즉시 반영되어야 한다.
+
+**표준 토큰 9개** (DESIGN_SYSTEM.colors 호환):
+```css
+:root {
+  --c-bg:           #...;   /* page background */
+  --c-surface:      #...;   /* card · panel surface */
+  --c-text:         #...;   /* primary text */
+  --c-text-muted:   #...;   /* secondary label · italic accent */
+  --c-muted-2:      #...;   /* tertiary text (선택) */
+  --c-border:       #...;   /* 1px divider · grid line */
+  --c-border-2:     #...;   /* 강조 border (선택) */
+  --c-primary:      #...;   /* CTA · 강조 라인 · 핵심 수치 */
+  --c-accent:       #...;   /* active state · highlight */
+}
+```
+
+**alpha 변형 처리** — `rgba(...)` 직접 금지. `color-mix` 사용 의무:
+```css
+/* ❌ 금지 — primary 변경 시 alpha 변형이 따라가지 못함 */
+background: rgba(61, 112, 104, 0.04);
+
+/* ✅ 의무 — 변수 변경 시 alpha 변형도 자동 추적 */
+background: color-mix(in srgb, var(--c-primary) 4%, transparent);
+```
+
+→ `color-mix`는 모던 브라우저 지원(Chrome 111+ / Safari 16.2+). PPTX 변환 시 slide-pptx-agent가 자동 호환 처리.
+
+---
+
+#### Color Tuner — 사용자 인터랙티브 색상 조정 (`color-tuner.html`)
+
+deck.html 완성 시 **별도 자체 완결형 HTML** `color-tuner.html`을 자동 생성. 사용자가 슬라이드 디자인 그대로 두고 색상만 조정하고 싶을 때 이 페이지로 진입.
+
+**구조**:
+- 좌 70%: 슬라이드 라이브 미리보기 (`.slide` 직접 박아넣기, `transform: scale`로 축소). **iframe 사용 금지** (file:// cross-origin 정책 회피).
+- 우 30%: 픽커 패널 — 9개 토큰 각각 `<input type="color">` + hex 텍스트 input 페어 (양방향 바인딩)
+- 슬라이드 네비: ←→ 키보드 + dropdown + ‹› 버튼 + N/Total 카운터
+- Reset (default 토큰 복귀) + Randomize Primary (자주 사용 팔레트 8종 무작위)
+- Export 탭: JSON (DESIGN_SYSTEM.colors 호환) + CSS (`:root`) — textarea + Copy 버튼
+
+**실시간 반영**:
+```js
+input.addEventListener('input', e => {
+  document.documentElement.style.setProperty('--c-primary', e.target.value);
+});
+```
+→ 픽커 변경 즉시 좌측 미리보기 모든 슬라이드 색상 갱신.
+
+**브라우저 자동 실행 (deck.html 완성 직후)**:
+```bash
+# Windows
+cmd.exe //c start "" "{path}/color-tuner.html"
+# Mac
+open "{path}/color-tuner.html"
+# Linux
+xdg-open "{path}/color-tuner.html"
+```
+
+**사용자 색상 변경 워크플로**:
+1. SDA가 deck.html + color-tuner.html 동시 생성
+2. 사용자가 color-tuner.html 브라우저에서 색상 조정
+3. Export로 새 색상 토큰 출력 (JSON 또는 CSS)
+4. 메인이 deck.html의 `:root` 블록만 부분 Edit (HTML 본체 0% 변경)
+
+**산출물 경로 컨벤션**:
+- `deck.html` — 본 N장 (색상 토큰화 적용)
+- `color-tuner.html` — 색상 조정 도구 (`.slide` 직접 박아넣기, iframe 금지)
+
+---
 
 ### 사진 레이아웃 규칙 (Photo Layout)
 
