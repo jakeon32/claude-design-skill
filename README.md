@@ -1,6 +1,6 @@
 # Claude Design Skill
 
-Claude Code용 디자인 에이전트 플러그인. 자연어 요청만으로 UI 프로토타입, 슬라이드 덱, A4 문서, 템플릿 재건, PowerPoint 파일까지 생성한다.
+Claude Code용 디자인 에이전트 플러그인. 자연어 요청만으로 UI 프로토타입, 슬라이드 덱, A4 문서, 자유 형식 그래픽, PowerPoint 파일까지 생성한다.
 
 ---
 
@@ -20,15 +20,16 @@ Anthropic의 [claude.ai/design](https://claude.ai/design) 워크플로우를 Cla
 
 ## 주요 기능
 
-### 1. 5가지 출력 모드
+### 1. 4가지 출력 모드 (모드 = 납품형식)
 
 | 모드 | 설명 | 주요 산출물 |
 |------|------|------------|
-| **① Prototype** | UI 목업, 대시보드, 랜딩페이지, 원페이저 | Self-contained HTML |
-| **② Slide Deck** | 발표자료, 피치덱, 투자자 보고서 | HTML 슬라이드 + 선택적 PPTX |
-| **③ From Template** | 기존 파일(HTML/Figma/스크린샷)의 구조를 추출해 재건 | HTML |
-| **④ Other** | 소셜 그래픽, 배너, 이메일 템플릿 등 | HTML |
-| **⑤ Document** | A4 매뉴얼, 가이드, 보고서 | HTML + `@media print` |
+| **① Prototype** | UI 목업, 대시보드, 랜딩페이지 | Self-contained HTML |
+| **② Slide Deck** | 발표자료, 피치덱, 투자자 보고서 | HTML 슬라이드 (기본) — "PPTX로" 요청 시 변환 |
+| **③ Other** | 소셜 그래픽, 배너, 이메일 템플릿 등 | HTML |
+| **④ Document** | A4 매뉴얼, 가이드, 보고서 | HTML + `@media print` |
+
+> 사용자가 제공하는 레퍼런스(이미지·URL·md 텍스트)는 별도 모드가 아니라 `design-system-manager`의 스타일 입력으로 흡수됨.
 
 ### 2. 73종 디자인 스타일 라이브러리
 
@@ -68,22 +69,22 @@ HTML 슬라이드 → python-pptx → PPTX → PowerPoint COM → PNG → 비교
 
 ## 에이전트 구조
 
-14개 에이전트가 역할을 분담하며 순차·병렬 실행한다.
+13개 에이전트가 역할을 분담하며 순차·병렬 실행한다.
 
 ```
 [MASTER — claude-design]
     │
-    ├─ 1. ProjectPlanner        ← 모드 선택 + 콘텐츠/원본 수집 + 신호 추출 (BRIEF 산출)
+    ├─ 1. ProjectPlanner        ← 모드 선택 + 내용·스타일 수집 (BRIEF 산출)
     ├─ 2. DesignSystemManager   ← BRIEF + 콘텐츠 컨텍스트로 DESIGN_SYSTEM + 컨셉 확정
+    │                              (사용자 제공 레퍼런스 이미지·URL·md 텍스트 흡수)
     │
-    ├─ 3. Generator (5개 모드 중 1개 — Agent tool 위임 통일)
-    │       ├─ prototype-agent      UI 목업 / 원페이저
-    │       ├─ slide-deck-agent     슬라이드 덱 (HTML)
-    │       │     ├─ slide-qa-agent     ← 자동 QA
-    │       │     └─ slide-pptx-agent   ← "PPTX로" 요청 시 (선택)
-    │       ├─ template-agent       파일 기반 재건 / 업종 프리셋
+    ├─ 3. Generator (4개 모드 중 1개 — Agent tool 위임 통일)
+    │       ├─ prototype-agent      UI 목업, 랜딩페이지, 대시보드 (HTML)
+    │       ├─ slide-deck-agent     슬라이드 덱 (HTML 기본)
+    │       │     ├─ slide-qa-agent     ← 자동 QA (코드 정합성)
+    │       │     └─ slide-pptx-agent   ← "PPTX로" 요청 시 자동 호환 변환
     │       ├─ document-agent       A4 매뉴얼 / 가이드 / 보고서
-    │       └─ other-agent          기타 그래픽
+    │       └─ other-agent          이메일·배너·카드뉴스·인포그래픽
     │
     ├─ 4. 선택적 전문 에이전트 (필요 시 병렬)
     │       ├─ copywriting-agent    카피/헤드라인/CTA
@@ -115,14 +116,13 @@ claude-design-skill/
         ├── package.json
         └── skills/claude-design/
             ├── SKILL.md               마스터 스킬 진입점
-            ├── agents/                에이전트 14개
+            ├── agents/                에이전트 13개
             │   ├── project-planner.md
             │   ├── design-system-manager.md
             │   ├── prototype-agent.md
             │   ├── slide-deck-agent.md
             │   ├── slide-qa-agent.md           슬라이드 자동 QA
-            │   ├── slide-pptx-agent.md         HTML → PPTX 변환 (선택)
-            │   ├── template-agent.md
+            │   ├── slide-pptx-agent.md         HTML → PPTX 자동 호환 변환 (선택)
             │   ├── document-agent.md
             │   ├── other-agent.md
             │   ├── visual-refiner.md

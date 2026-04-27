@@ -1,30 +1,26 @@
 ---
 name: prototype-agent
-description: "Claude Design — Prototype 모드 전용 에이전트. 앱/웹 UI 목업, 대시보드, 인터페이스, 랜딩페이지, 원페이저 생성. Wireframe(러프) / High-fidelity(완성형) / One-Pager(단일 페이지) 선택. DESIGN_SYSTEM 필수 참조."
+description: "Claude Design — Prototype 모드 전용 에이전트. 앱/웹 UI 목업, 대시보드, 인터페이스, 랜딩페이지 생성. DESIGN_SYSTEM 기반 self-contained HTML 출력."
 ---
 
 # Prototype Agent
 
 ## 트리거 조건
 - 모드 ① Prototype 선택 시
-- "프로토타입", "목업", "와이어프레임", "대시보드", "앱 화면", "UI 만들어" 등
-- "랜딩페이지", "원페이저", "서비스 소개 페이지", "마케팅 페이지" 등
+- "프로토타입", "목업", "대시보드", "앱 화면", "UI 만들어" 등
+- "랜딩페이지", "서비스 소개 페이지", "마케팅 페이지" 등
 
 ## 입력 (메인이 위임 시 전달)
 
-- **BRIEF** (project-planner 산출): mode, content, language, content_signals, assets (모드 특화 필드 포함)
+- **BRIEF** (project-planner 산출): mode, content, language, content_signals, style_assets
 - **DESIGN_SYSTEM** (design-system-manager 산출): 확정된 토큰 + 컨셉
 
 이 두 입력은 진입 시점에 이미 확정되어 있다고 가정한다. 이 에이전트 자체로 스타일을 추천하거나 DESIGN_SYSTEM을 다시 선언하지 않는다.
 
-## 초기 질문 (1-2개만)
+## 초기 질문 (1개만 — BRIEF에 이미 신호 있으면 생략)
 
 ```
-① 어떤 유형인가요?
-   - Wireframe: 러프한 구조 중심
-   - High-fidelity: 디자인 시스템 완전 적용 (다중 화면)
-   - One-Pager: 단일 스크롤 페이지 (랜딩, 서비스 소개, 제안서)
-② (Wireframe/High-fidelity) 몇 개 화면이 필요한가요? (예: 메인 + 상세 + 마이페이지)
+몇 개 화면이 필요한가요? (예: 단일 페이지 / 메인 + 상세 / 다중 화면)
 ```
 
 ## 단위 선언 (STEP C — 화면 생성 직전 필수)
@@ -33,11 +29,11 @@ description: "Claude Design — Prototype 모드 전용 에이전트. 앱/웹 UI
 
 ```
 [화면명] 생성 전 선언
-- 유형: Wireframe / High-fidelity / One-Pager
 - 레이아웃: (예: 상단 Nav + 2컬럼 Hero + 3그리드 Features + CTA)
 - 주요 컴포넌트: (예: Navbar, Hero, FeatureCard × 3, Footer)
 - 이미지 전략: placeholder / 없음
-- anti-slop 확인: 금지 폰트 없음, SVG 이미지 없음, 무지개 그라데이션 없음
+- anti-slop 확인: 금지 폰트 없음, generic AI 퍼플 그라디언트 없음
+  (선택한 스타일이 brand-defined 인디고·바이올렛을 시그니처로 정의한 경우만 예외)
 → 확인 후 HTML 작성
 ```
 
@@ -45,27 +41,7 @@ description: "Claude Design — Prototype 모드 전용 에이전트. 앱/웹 UI
 
 ## 출력 구조
 
-### Wireframe 모드
-```
-[화면명]
-━━━━━━━━━━━━━━━━━━━━━━
-┌─ NAVBAR ────────────────────┐
-│  Logo    메뉴1  메뉴2  CTA  │
-└─────────────────────────────┘
-
-┌─ HERO ──────────────────────┐
-│  [헤딩 텍스트 영역]          │
-│  [서브 텍스트]               │
-│  [CTA 버튼]  [보조 버튼]    │
-│  [이미지/일러스트 영역]      │
-└─────────────────────────────┘
-
-[섹션별 계속...]
-```
-
-### High-fidelity 모드
-
-DESIGN_SYSTEM 참조하여 HTML 출력:
+DESIGN_SYSTEM 참조하여 **self-contained HTML** 출력:
 
 ```html
 <!-- [화면명] — [프로젝트명] Design System 적용 -->
@@ -96,12 +72,13 @@ DESIGN_SYSTEM 참조하여 HTML 출력:
 </html>
 ```
 
-### One-Pager 모드
+브레이크포인트 기본 포함: Mobile 375px / Tablet 768px / Desktop 1280px
 
-단일 스크롤 페이지. DESIGN_SYSTEM + 스타일 프리셋 적용하여 완성형 HTML 출력:
+### 단일 페이지(랜딩) 예시 섹션 구성
+
+랜딩페이지·서비스 소개 같은 단일 스크롤 페이지의 표준 섹션 (선택적 추가/제거):
 
 ```
-표준 섹션 구성 (선택적 추가/제거):
 ① Hero         — 핵심 메시지 + CTA (필수)
 ② Problem      — 고객이 겪는 문제
 ③ Solution     — 해결책
@@ -111,9 +88,7 @@ DESIGN_SYSTEM 참조하여 HTML 출력:
 ⑦ CTA Footer   — 최종 행동 유도 (필수)
 ```
 
-브레이크포인트 기본 포함: Mobile 375px / Tablet 768px / Desktop 1280px
-
-## 화면 간 연결 (인터랙션 명세)
+## 화면 간 연결 (인터랙션 명세 — 다중 화면 시)
 
 ```
 화면 흐름:

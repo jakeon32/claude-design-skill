@@ -107,61 +107,13 @@ S5: 3col-equal  ✓
 ② 슬라이드 수 목표는? 스피커 노트 필요한가요? (ON/OFF)
 ```
 
-## Step 0-pre: 납품 형식 최선결정 (필수 — HTML 작성 전)
+## 출력 형식 (HTML 기본)
 
-**"납품 형식을 HTML 작성 전에 결정하지 않으면 2-3시간 재작업"** — Huashu Design
+slide-deck-agent의 기본 출력은 **self-contained HTML 슬라이드**(1280×720 16:9, DESIGN_SYSTEM 기반). 별도로 형식을 묻지 않는다.
 
-HTML 생성 전 반드시 확인:
+PPTX 변환은 사용자가 슬라이드 완성 후 **"PPTX로"** 요청 시 메인이 `slide-pptx-agent`를 호출한다. 변환 시점에 자동 호환 처리(gradient → solid, `<div>`/`<span>` → `<p>`, 1280×720 캔버스 정렬, background 속성 정리)가 적용되므로, **slide-deck는 HTML 시각 표현(gradient·shadow·rounded·복합 마크업)을 자유롭게 사용**해도 된다.
 
-```
-최종 납품 형식은 무엇인가요?
-
-A) 브라우저 발표용 (HTML만)      → 제약 없음, 자유롭게
-B) PDF 추가                      → A와 동일, 추가 제약 없음
-C) 편집 가능한 PPTX 추가         → 아래 4개 하드 제약 필수 적용
-```
-
-### PPTX 호환 HTML 4개 하드 제약 (C 선택 시)
-
-```
-① 캔버스 크기: 1280×720px (= 960×540pt) — 기본 캔버스와 동일, 별도 변경 불필요
-② 모든 텍스트: <p> 태그로 래핑 (div·span 금지)
-③ <p> 태그에 background 속성 금지
-④ gradient 사용 금지 (solid color만)
-```
-
-→ 이 제약은 `export_deck_pptx.mjs`로 DOM→PPTX 변환 시 텍스트가 이미지로 찌그러지지 않기 위한 조건.  
-→ C를 선택하면 Step 2 HTML 생성 시 위 제약을 처음부터 반영한다.
-→ DESIGN_SYSTEM.pptx_mode = true 로 설정해 이후 모든 에이전트가 인식.
-
-### PPTX 모드 gradient 대체 패턴
-
-gradient 금지로 인해 아래 패턴을 대체 적용한다.
-
-| HTML 일반 패턴 | PPTX 모드 대체 |
-|-------------|--------------|
-| Photo Panel Gradient Blend (`linear-gradient`) | 이미지·텍스트 패널 명확히 분리 + 경계선 처리 |
-| 전체화면 이미지 gradient 오버레이 | `background: rgba(r,g,b,0.6)` solid 오버레이 |
-| 배경 gradient | solid color 2가지 패널 분할 (left/right 또는 top/bottom) |
-| Cover 장식 gradient 도형 | solid opacity 도형으로 교체 |
-
-**Photo Panel 대체 예시:**
-```html
-<!-- ❌ 일반 모드: gradient blend -->
-<div style="position:relative;">
-  <img style="width:100%; height:100%; object-fit:cover;">
-  <div style="position:absolute; inset:0;
-    background:linear-gradient(to right, #1a1a2e 0%, transparent 50%);"></div>
-</div>
-
-<!-- ✅ PPTX 모드: solid 분리 -->
-<div style="display:flex; width:100%; height:100%;">
-  <div style="flex:1; background:#1a1a2e; padding:60px 48px;"><!-- 텍스트 --></div>
-  <div style="flex:1; overflow:hidden;">
-    <img style="width:100%; height:100%; object-fit:cover;">
-  </div>
-</div>
-```
+→ PPTX 호환 처리 패턴(4개 하드 제약 + gradient 대체) 상세는 `agents/slide-pptx-agent.md` 참조.
 
 ---
 
@@ -434,6 +386,31 @@ Expression 다양성 체크: ✓ panel 40% 이하 / ✓ 연속 동일 없음
 ```
 
 10장 미만이면 바로 전체 생성 가능.
+
+### 쇼케이스 자가검수 (스크린샷 전 SDA 직접 수행 — visual-refiner 개입 X)
+
+HTML 파일 저장 직후, 스크린샷을 찍기 **전에** 아래 항목을 코드로 직접 확인한다.
+
+```
+[커버 검수]
+□ 텍스트 블록 ≤ 2개인가? (태그·제목·서브·메타 합산)
+□ .cover-meta / 메타 row 구조 없는가?
+□ 캔버스 크기 1280×720인가? (1920×1080 금지)
+
+[Anti-slop]
+□ 금지 폰트(Inter/Roboto/Arial/Space Grotesk) 미사용?
+□ 무지개 그라데이션 배경 없음?
+□ 둥근 카드 + border-left accent 조합 없음?
+□ SVG imagery 대신 placeholder 사용?
+
+[색상·타이포]
+□ 60-30-10 분배 준수?
+□ Accent ≤ 3곳/슬라이드?
+□ 폰트 계층 Title:Subtitle:Body ≈ 3:2:1?
+□ 본문 최소 16px?
+
+→ 하나라도 ✗이면: 스크린샷 전 코드 수정 → 재검수 → 통과 후 스크린샷
+```
 
 ---
 
@@ -749,13 +726,6 @@ display:grid; grid-template-columns:repeat(N,1fr); grid-template-rows:1fr;
 
 **생성 전 자기 체크**
 
-**[PPTX 모드 — pptx_mode: true 시 반드시 확인]**
-- [ ] 모든 텍스트가 `<p>` 태그로 래핑됐는가? (`div`/`span` 텍스트 없는가)
-- [ ] `<p>` 태그에 `background` 속성이 없는가?
-- [ ] `linear-gradient` / `radial-gradient` 를 사용하지 않았는가?
-- [ ] Photo Panel을 gradient blend 대신 solid 분리 패턴으로 작성했는가?
-- [ ] 전체화면 이미지 오버레이가 solid `rgba()` 로만 처리됐는가?
-
 **[레이아웃 베리에이션]**
 - [ ] 각 슬라이드의 Expression (whitespace / panel / line) 을 결정했는가?
 - [ ] 각 슬라이드의 Proportion (비율) 을 결정했는가?
@@ -859,9 +829,7 @@ v3 커버: [레이아웃] × [비율] × [경계표현]
 
 | 요청 | 출력 |
 |------|------|
-| "PDF로" | `window.print()` 안내 + 각 슬라이드 분리 HTML |
-| "Figma로" | Figma Console MCP로 프레임 생성 |
-| "PPTX로" | 메인이 `slide-pptx-agent` 호출 — python-pptx로 .pptx 파일 생성 |
-| "React로" | 컴포넌트 코드 핸드오프 |
+| (기본) | self-contained HTML (1280×720 16:9, DESIGN_SYSTEM 적용) |
+| "PPTX로" | 메인이 `slide-pptx-agent` 호출 — HTML → .pptx 자동 호환 변환 |
 
 > PPTX 변환 상세 절차는 `agents/slide-pptx-agent.md` 참조.

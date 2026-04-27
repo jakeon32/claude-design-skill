@@ -17,12 +17,11 @@ DESIGN_SYSTEM 확정 없이는 어떤 모드별 에이전트도 생성 불가.
 ## 입력 (BRIEF에서 받음)
 
 ```
-mode: ① prototype / ② slide / ③ template / ④ other / ⑤ document
+mode: ① prototype / ② slide / ③ other / ④ document
 language: KR / EN / 혼합
 content_signals: mood / industry / tone / audience / complexity
 content: 목적 / 타겟 / 핵심 메시지 / 원본 자료
-brand_assets: logo / colors / references
-pptx_mode: true / false
+style_assets: logo / colors / user_references (이미지·URL·md 텍스트)
 ```
 
 ---
@@ -75,19 +74,16 @@ content_signals를 사용해 top 3 스타일 후보 생성:
 
 ### 3단계: 모드별 출력 환경 반영
 
-mode 값에 따라 typography·spacing·플래그 조정:
+mode 값에 따라 typography·spacing 조정:
 
 | mode | 반영 항목 |
 |------|---------|
 | ① prototype | 웹 뷰포트 가정, 반응형 토큰 (mobile/tablet/desktop breakpoint) |
 | ② slide | 16:9 캔버스 1280×720 가정, 본문 최소 16px, heading 슬라이드용 스케일 (40-80px) |
-| ③ template | 원본 템플릿 토큰 우선, 모드 보강은 최소 |
-| ④ other | 결과물 크기에 맞춘 스케일 (이메일/배너 등) |
-| ⑤ document | A4 인쇄 고려 타이포 계층, 본문 최소 크기 (인쇄 환경) |
+| ③ other | 결과물 크기에 맞춘 스케일 (이메일/배너 등) |
+| ④ document | A4 인쇄 고려 타이포 계층, 본문 최소 크기 (인쇄 환경) |
 
-`pptx_mode: true`이면:
-- DESIGN_SYSTEM.pptx_mode = true 설정
-- 모드별 에이전트가 이 플래그를 보고 gradient → solid 대체, `<p>` 태그 강제 등 적용
+PPTX 변환은 사후 요청 시 slide-pptx-agent가 자동 호환 처리(gradient → solid, div → p 등) — DSM은 pptx 플래그를 두지 않는다.
 
 ### 4단계: 한국어 자동 병합
 
@@ -100,25 +96,31 @@ mode 값에 따라 typography·spacing·플래그 조정:
 4. 원본 스타일의 색상·레이아웃은 유지 — 타이포·스페이싱만 재조정
 ```
 
+**우선순위 (스타일 non-negotiable > Korean Localization)**: 스타일이 라틴 폰트를 non-negotiable로 명시한 경우(예: Corporate Trust의 Plus Jakarta Sans), 한글 = Pretendard / 라틴 글리프 = 스타일 폰트 듀얼 페어링. font-stack 순서에서 Pretendard를 앞에 두고 스타일 폰트를 뒤에 두면 브라우저의 자동 글리프 fallback으로 분리 적용됨.
+
 (현재 SKILL.md의 Korean Layer가 사후 처리하던 것을 DSM 안으로 흡수. 콘텐츠 언어를 BRIEF에서 알고 있으므로 사후가 아닌 확정 단계에서 처리)
 
 ### 5단계: 자산 보강
 
-BRIEF의 `brand_assets`를 DESIGN_SYSTEM에 통합:
+BRIEF의 `style_assets`를 DESIGN_SYSTEM에 통합:
 
 ```
 로고 있으면:
   - 로고 주요 색상 추출 → primary 또는 accent 보강
-  - DESIGN_SYSTEM.brand_assets.logo_path 기록
-  
+  - DESIGN_SYSTEM.style_assets.logo_path 기록
+
 브랜드 컬러 있으면:
   - 우선순위: 사용자 지정 > 스타일 팔레트 > 기본값
   - DESIGN_SYSTEM.colors 덮어쓰기
 
-참고 이미지 있으면:
-  - DESIGN_SYSTEM.brand_assets.reference_images 기록
-  - 색상 신호 추출해 보강
+사용자 제공 레퍼런스 (이미지 / URL / md 텍스트) 있으면:
+  - 이미지: 색상·레이아웃·타이포 신호 추출 → 1단계 추천 점수에 반영, 자산 보강
+  - URL: 페이지 분석 가능 시 색상·레이아웃·타이포 신호 추출 (불가 시 사용자에게 스크린샷 요청)
+  - md 텍스트: 사용자가 원하는 톤·스타일을 자연어로 묘사한 경우 — content_signals에 추가 신호로 흡수
+  - DESIGN_SYSTEM.style_assets.user_references 에 원본 + 추출 신호 기록
 ```
+
+**지원 레퍼런스 형식**: 이미지(PNG/JPG/스크린샷) / URL / md 텍스트만 지원. PPTX·DOCX·바이너리 파일은 현재 미지원 — 받으면 사용자에게 이미지·md로 변환 요청.
 
 ### 6단계: DESIGN_SYSTEM 출력 + 메인에 반환
 
@@ -162,11 +164,13 @@ DESIGN_SYSTEM:
   radius: "8px"
   shadow: "0 4px 16px rgba(0,0,0,0.08)"
   tone: ""
-  brand_assets:
+  style_assets:
     logo_path: ""
     logo_colors: []
-    reference_images: []
-  pptx_mode: false
+    user_references:
+      images: []     # 이미지·스크린샷 경로
+      urls: []       # 사용자 제공 URL
+      texts: []      # md/자연어 묘사
   last_updated: "YYYY-MM-DD"
 ```
 
@@ -199,7 +203,7 @@ DESIGN_SYSTEM:
 
 ## 규칙
 - DESIGN_SYSTEM 확정 전 어떤 모드별 에이전트도 출력 생성 불가
-- 자동 추천 단일 경로 — Figma·코드베이스·스타일 명시 분기 폐기
-- 한국어 콘텐츠 → DSM 안에서 자동 병합 (사후 처리 X)
+- 자동 추천 단일 경로 — 입력 출처별 분기는 폐기 (이전 버전 잔재). 사용자가 레퍼런스(이미지/URL/md)를 제공하면 5단계 자산 보강에서 활용
+- 한국어 콘텐츠 → DSM 안에서 자동 병합 (사후 처리 X). 우선순위: **스타일 non-negotiable > Korean Localization** — 듀얼 페어링으로 해결
 - 업데이트 시 `last_updated` 갱신
 - sub-agent끼리 직접 호출 금지 — 메인이 orchestrate

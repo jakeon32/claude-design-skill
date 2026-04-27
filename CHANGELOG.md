@@ -6,6 +6,32 @@ Claude Design Skill의 변경 이력. 형식은 [Keep a Changelog](https://keepa
 
 ## [Unreleased] — v3 진행 중
 
+### Phase 6 (2026-04-27): 4모드 구조 + 잔재 일괄 폐기
+
+**구조 변경**:
+- 5모드 → **4모드** (③ From Template 폐기). `agents/template-agent.md` **파일 삭제**.
+- Sub-agent 14개 → **13개**.
+- "**모드 = 납품형식**" 원칙 SKILL.md에 명문화. 사용자 수집 = 내용 + 스타일 두 카테고리만.
+- BRIEF 필드 `brand_assets` → `style_assets` 명칭 변경 (사용자 제공 레퍼런스 흡수 위해).
+- DESIGN_SYSTEM에 `style_assets.user_references = { images, urls, texts }` 신설 — 사용자가 제공한 이미지·URL·md 텍스트를 스타일 입력으로 활용.
+
+**잔재 일괄 제거**:
+- Figma 입력·출력 분기 (project-planner / template / slide-deck / DSM 5곳)
+- React 출력 분기 (slide-deck "React로")
+- PDF delivery 옵션 (project-planner / slide-deck "Step 0-pre 납품 형식 묻기" 블록)
+- Wireframe / High-fidelity / One-Pager 분기 (prototype-agent 본체 + project-planner 매핑)
+- `pptx_mode` 플래그 (SKILL/DSM/SDA/slide-qa/qa-pipeline 전 5곳)
+- project-planner Junior 3-체크포인트 → **2-체크포인트**로 단순화 (콘텐츠/스타일 수집)
+
+**규칙 명확화 (SKILL.md)**:
+- Anti-slop: "**generic AI 퍼플 그라디언트 금지** / **brand-defined 인디고·바이올렛은 예외**" 명문화 (Corporate Trust 등 시그니처 보호).
+- 폰트 우선순위: "**스타일 non-negotiable > Korean Localization**" 명문화 — 한글 Pretendard / 라틴 스타일폰트 듀얼 페어링 (DSM 4단계 책임).
+
+**slide-deck ↔ slide-pptx 책임 분리**:
+- `slide-deck-agent` = HTML 자유 (gradient·shadow·복합 마크업 OK).
+- `slide-pptx-agent` = "PPTX로" 요청 시 변환. 4개 하드 제약(1280×720 / `<p>` 태그 / no bg / no gradient) + gradient → solid 자동 대체 + Photo Panel solid 분리 패턴이 본 에이전트로 이전. 변환 시점 자동 호환 처리.
+- `slide-qa-agent`에서 PPTX 호환 검사(Tier 5 / Group F) 폐기.
+
 ### Added
 - **slide-qa-agent** — HTML 슬라이드 코드 검수 전담 에이전트 (`agents/slide-qa-agent.md`).
   - 8개 그룹·30개 항목 자동 체크: 구조 무결성(A·9)·한국어 폰트(B·2)·letter-spacing(C·2)·카운터 시스템(D·3)·그리드 다양성(E·3)·PPTX 호환(F·3)·일반 규칙(G·5)·공간 문법 다양성(H·3).

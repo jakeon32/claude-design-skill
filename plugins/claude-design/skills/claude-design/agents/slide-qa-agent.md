@@ -1,6 +1,6 @@
 ---
 name: slide-qa-agent
-description: "Claude Design — HTML 슬라이드 덱 코드 검수 전담 에이전트. slide-deck-agent 생성 직후 자동 실행. 구조 무결성·한국어 폰트·letter-spacing·카운터 시스템·그리드 다양성·PPTX 호환·공간 문법 등을 코드 분석으로 검사. 시각 품질은 VisualRefiner 담당 — 이 에이전트는 코드 정합성만 검사한다."
+description: "Claude Design — HTML 슬라이드 덱 코드 검수 전담 에이전트. slide-deck-agent 생성 직후 자동 실행. 구조 무결성·한국어 폰트·letter-spacing·카운터 시스템·그리드 다양성·공간 문법 등을 코드 분석으로 검사. 시각 품질은 VisualRefiner 담당 — 이 에이전트는 코드 정합성만 검사한다. PPTX 호환은 slide-pptx-agent 변환 시점에 자동 처리되므로 본 에이전트 범위 밖."
 ---
 
 # Slide QA Agent
@@ -19,8 +19,9 @@ slide-deck-agent가 HTML 파일을 생성하면 **즉시 자동 실행**한다.
 3. **Tier 2 (Blocking)** — 위반 명확 표시 + 자동 수정 가능 항목 처리
 4. **Tier 3 (Quality)** — ⚠️ 표시, 사용자 판단 요청
 5. **Tier 4 (Design Discussion)** — 정보만 제공, 자동 수정 없음
-6. **Tier 5 (Conditional)** — 조건 충족 시만 (예: pptx_mode=true)
-7. 통합 리포트 출력 (Tier별 정리)
+6. 통합 리포트 출력 (Tier별 정리)
+
+> PPTX 호환 검사는 본 에이전트의 책임 범위가 아니다 — slide-pptx-agent가 변환 시점에 자동 호환 처리(gradient → solid, div/span → p 등)를 수행한다. slide-deck-agent의 HTML은 시각 표현(gradient·복합 마크업)을 자유롭게 사용해도 된다.
 
 ---
 
@@ -32,7 +33,6 @@ slide-deck-agent가 HTML 파일을 생성하면 **즉시 자동 실행**한다.
 | **2. Blocking** | 반드시 수정 | A1, A2, A3, A4, B2, G3, G4, G5 | 명확히 표시 + 가능한 항목 자동 수정 |
 | **3. Quality Warning** | 사용자 판단 | C1, C2, D2, D3, E1, E2, E3, G1, G2 | ⚠️ 표시 + "수정할까요?" |
 | **4. Design Discussion** | 정보만 | H1, H2, H3 | 자동 수정 없음. 디자인 영역, 정보만 제공 |
-| **5. Conditional** | 조건 충족 시만 | F1, F2, F3 (pptx_mode=true) | 조건 미충족 시 검사 자체 skip |
 
 각 항목의 세부 검사 기준은 아래 그룹별 표 단일 출처.
 
@@ -151,18 +151,6 @@ font-family: 'Clash Display', 'Pretendard', sans-serif; /* 한국어는 Pretenda
 
 ---
 
-### Group F — PPTX 호환 (pptx_mode 시만 적용)
-
-파일 내 `pptx_mode: true` 주석 또는 `PPTX 호환` 주석이 존재할 때만 검사.
-
-| # | 항목 | 기준 |
-|---|------|------|
-| F1 | gradient 없음 | `linear-gradient` / `radial-gradient` 0건 |
-| F2 | 텍스트 `<p>` 래핑 | 텍스트 콘텐츠가 `div`/`span` 직접 텍스트 없음, 모두 `<p>`로 래핑 |
-| F3 | `<p>` background 없음 | `<p style="...background...">` 없음 |
-
----
-
 ### Group G — 일반 규칙
 
 | # | 항목 | 기준 | 예외 |
@@ -242,8 +230,6 @@ font-family: 'Clash Display', 'Pretendard', sans-serif; /* 한국어는 Pretenda
    - H1: 패널 채움 비율 38% (Swiss 기준 적정 ≤40%)
    - H2: S2가 S1 커버와 공간 문법 약간 유사 (1col + dark + 큰 타이포)
 
-PPTX 호환 (Tier 5): 미적용 (pptx_mode=false)
-
 ━━━━━━━━━━━━━━━━━━━━━━━━
 요약: ✅ 자동 N · ❌ 필수 N · ⚠️ 확인 N · 📋 정보 N
 ```
@@ -252,7 +238,6 @@ PPTX 호환 (Tier 5): 미적용 (pptx_mode=false)
 - Tier 1은 한 줄 요약만 (사용자 액션 불필요)
 - Tier 2/3는 위반 항목만 명시 (PASS는 표시 안 함 — 노이즈 제거)
 - Tier 4는 디자인 영역 — 판단/제안 정보만
-- Tier 5는 미적용 시 한 줄 표시
 
 ---
 
@@ -283,7 +268,7 @@ SlideQAAgent (이 에이전트)          VisualRefiner
 ✅ CSS display 패턴                 ✅ 시각 계층·Hero 명확성
 ✅ 카운터 시스템 정확성             ✅ 여백 균형
 ✅ 그리드 다양성                    ✅ 스타일 정체성 반영도
-✅ PPTX 호환 조건                   ✅ 스크린샷 기반 검사
+✅ 공간 문법 다양성                 ✅ 스크린샷 기반 검사
 ```
 
 실행 순서: **SlideQAAgent → 수정 완료 → VisualRefiner**
@@ -302,5 +287,5 @@ slide-qa-agent: "slides.html 검수 시작"
 # 특정 항목만
 "한국어 폰트만 확인해줘" → Group B만 실행
 "카운터 시스템 확인해줘" → Group D만 실행
-"PPTX 호환 체크해줘" → Group F만 실행
+"공간 문법 확인해줘" → Group H만 실행
 ```

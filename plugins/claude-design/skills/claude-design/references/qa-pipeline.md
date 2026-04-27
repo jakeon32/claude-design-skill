@@ -220,7 +220,6 @@ python tools/capture_compare.py
 □ HTML 파일 경로 확인 (d:\tmp\slides.html)
 □ Chrome DevTools MCP 연결 확인
 □ 스크린샷 저장 경로 확인 (d:\tmp\captures\)
-□ PPTX 모드 여부 확인 (DESIGN_SYSTEM.pptx_mode)
 □ 적용 스타일 확인 (스타일별 예외 적용 위해)
 □ QA 결과를 verified-layouts.md에 기록
 ```

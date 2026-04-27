@@ -5,7 +5,9 @@ description: "Claude Design — slide-deck-agent가 만든 HTML 슬라이드를 
 
 # Slide PPTX Agent
 
-slide-deck-agent로 완성된 HTML 슬라이드를 실제 PowerPoint 파일(.pptx)로 변환한다.
+slide-deck-agent로 완성된 HTML 슬라이드를 편집 가능한 PowerPoint(.pptx)로 변환한다. python-pptx 기반.
+
+slide-deck는 HTML 시각 표현(gradient·shadow·rounded·복합 마크업)을 자유롭게 사용하므로, 본 에이전트는 변환 시점에 PPTX 호환을 위한 **자동 정리**를 수행한다. 사용자나 메인이 SDA를 재실행할 필요 없음.
 
 ## 트리거
 
@@ -15,9 +17,47 @@ slide-deck-agent로 완성된 HTML 슬라이드를 실제 PowerPoint 파일(.ppt
 ## 입력 (메인이 위임 시 전달)
 
 - 완성된 HTML 슬라이드 경로 (예: `d:\tmp\slides.html`)
-- **DESIGN_SYSTEM** (`pptx_mode: true` 전제)
+- **DESIGN_SYSTEM** (slide-deck-agent가 사용한 토큰 그대로)
 
-HTML 단계에서 PPTX 모드 4개 하드 제약(1280×720, 모든 텍스트 `<p>` 래핑, `<p>` background 금지, gradient 금지)이 이미 반영되어 있어야 한다. 미반영 시 메인에게 SDA 재실행 요청.
+## 변환 호환 처리 — 4개 하드 제약 + 자동 정리
+
+PowerPoint(python-pptx)는 HTML/CSS의 gradient·복합 inline 스타일을 렌더링하지 못한다. 다음 4개 제약을 변환 시점에 자동 적용한다:
+
+```
+① 캔버스: 1280×720px (= 960×540pt) — slide-deck는 이미 이 크기 사용 (DSM 강제)
+② 모든 텍스트 노드 → <p> 태그로 래핑 (div·span은 자동 변환)
+③ <p> 태그의 background 속성 제거
+④ gradient → solid 자동 대체 (palette에서 가까운 solid 선택)
+```
+
+→ 변환 시 텍스트가 이미지로 찌그러지지 않기 위한 조건. slide-deck-agent의 HTML 자유도는 보존, 변환 책임은 본 에이전트에 집중.
+
+### gradient → solid 자동 대체 패턴
+
+| HTML 일반 패턴 (slide-deck 자유) | PPTX 자동 대체 (slide-pptx 변환 시) |
+|-------------|--------------|
+| Photo Panel Gradient Blend (`linear-gradient`) | 이미지·텍스트 패널 명확히 분리 + 경계선 처리 |
+| 전체화면 이미지 gradient 오버레이 | `background: rgba(r,g,b,0.6)` solid 오버레이 |
+| 배경 gradient | solid color 2가지 패널 분할 (left/right 또는 top/bottom) |
+| Cover 장식 gradient 도형 | solid opacity 도형으로 교체 |
+
+**Photo Panel 대체 예시:**
+```html
+<!-- HTML 원본 (slide-deck): gradient blend -->
+<div style="position:relative;">
+  <img style="width:100%; height:100%; object-fit:cover;">
+  <div style="position:absolute; inset:0;
+    background:linear-gradient(to right, #1a1a2e 0%, transparent 50%);"></div>
+</div>
+
+<!-- PPTX 변환 후 (slide-pptx): solid 분리 -->
+<div style="display:flex; width:100%; height:100%;">
+  <div style="flex:1; background:#1a1a2e; padding:60px 48px;"><!-- 텍스트 --></div>
+  <div style="flex:1; overflow:hidden;">
+    <img style="width:100%; height:100%; object-fit:cover;">
+  </div>
+</div>
+```
 
 ## 구조
 
