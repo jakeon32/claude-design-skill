@@ -1,15 +1,15 @@
 # Claude Design Skill
 
-Claude Code용 디자인 에이전트 플러그인. HTML 프로토타입, 슬라이드 덱, A4 문서, 템플릿 재건, PowerPoint 변환을 포함한다.
+Claude Code용 디자인 에이전트 플러그인. HTML 프로토타입, 슬라이드 덱, A4 문서, 자유 형식 그래픽, PowerPoint 변환을 포함한다.
 
 ## 흐름 (B 흐름)
 
 ```
-모드 선택 + 콘텐츠 수집 → DESIGN_SYSTEM 확정 → 모드별 생성 → 핸드오프
+모드 선택 + 내용·스타일 수집 → DESIGN_SYSTEM 확정 → 모드별 생성 → 핸드오프
 ```
 
-ProjectPlanner → DesignSystemManager → Generator(5개 모드 중 1개) → Handoff.
-"PPTX로" 요청 시 메인이 `slide-pptx-agent` 추가 호출.
+ProjectPlanner → DesignSystemManager → Generator(4개 모드 중 1개) → Handoff.
+"PPTX로" 요청 시 메인이 `slide-pptx-agent` 추가 호출 (변환 시 자동 호환 처리).
 
 sub-agent끼리 직접 호출 금지 — 메인이 orchestrate.
 
@@ -20,10 +20,10 @@ plugins/claude-design/
   package.json
   skills/claude-design/
     SKILL.md              ← 스킬 진입점
-    agents/               ← 에이전트 14개
+    agents/               ← 에이전트 13개
                             (project-planner / design-system-manager /
                              prototype / slide-deck / slide-qa / slide-pptx /
-                             template / document / other / visual-refiner +
+                             document / other / visual-refiner +
                              선택적: copywriting / animation / responsive / accessibility)
     references/           ← 디자인 레퍼런스
                             (korean-typography, output-common, color-rules,
