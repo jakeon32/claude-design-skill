@@ -846,75 +846,97 @@ document.addEventListener('keydown', e => {
 
 deck.html 완성 시 **별도 자체 완결형 HTML** `color-tuner.html`을 자동 생성. 사용자가 슬라이드 디자인 그대로 두고 색상만 조정하고 싶을 때 이 페이지로 진입.
 
-**구조**:
-- 좌 70%: 슬라이드 라이브 미리보기 (`.slide` 직접 박아넣기, `transform: scale`로 축소). **iframe 사용 금지** (file:// cross-origin 정책 회피).
-- 우 30%: 픽커 패널 — 9개 토큰 각각 `<input type="color">` + hex 텍스트 input 페어 (양방향 바인딩)
-- 슬라이드 네비: ←→ 키보드 + dropdown + ‹› 버튼 + N/Total 카운터
-- **Save as Default**: 현재 색상을 localStorage에 user default로 저장 (key: `color-tuner:default-colors:{path}` — 프로젝트별 분리). 다음에 color-tuner 열면 saved default로 시작.
-- **Reset to Default**: saved default 있으면 그걸로, 없으면 코드 박아넣은 원본 default로 복귀
-- Randomize Primary (자주 사용 팔레트 8종 무작위)
-- Export 탭: JSON (DESIGN_SYSTEM.colors 호환) + CSS (`:root`) — textarea + Copy 버튼
-- Toast 피드백 (Saved/Reset 알림)
+##### 템플릿 의무화 (필수 — 직접 작성 금지)
 
-**실시간 반영**:
-```js
-input.addEventListener('input', e => {
-  document.documentElement.style.setProperty('--c-primary', e.target.value);
-});
+**SDA는 color-tuner.html을 직접 작성하지 않는다.** 매번 호출마다 미세하게 달라지는 위험을 차단하기 위해 **고정 템플릿 + 변수 substitution**만 허용.
+
+- **템플릿 파일**: `references/templates/color-tuner.template.html`
+- **JS·CSS·HTML 본체 직접 작성·수정 금지** — placeholder substitute 외 허용 안 됨
+- **chrome 색상(배경 #F5F5F5 / 텍스트 #181818 / 라벨 #8F8F8F)은 모든 deck에서 동일** — 토큰화 금지
+- **Save 버튼 등 accent**는 템플릿이 deck의 accent 토큰을 자동 추적 (`var(--tuner-accent)` fallback 체인)
+
+##### 생성 절차
+
 ```
-→ 픽커 변경 즉시 좌측 미리보기 모든 슬라이드 색상 갱신.
+1. deck.html 빌드 완료 후, :root 토큰 정의 추출 → TOKENS_DATA 배열 구성
+   [
+     { name: "--ink",    default: "#000000", role: "Cover · Section bg",
+       section: "Ground · Surface", alias: "ink" },
+     { name: "--accent", default: "#DA291C", role: "Brand accent · 1pt/slide",
+       section: "Accent", alias: "accent" },
+     ...
+   ]
+   - section 필드: 새 값 등장 시점마다 picker UI에 그룹 헤더 자동 삽입
+   - alias 필드: JSON export 시 semantic key (snake_case). 생략하면 `--foo-bar` → `foo_bar` 자동 변환
 
-**구현 주의 — applyAllFromState는 HEX 토큰만 setProperty**:
+2. deck.html의 .slide 마크업 + 슬라이드 관련 CSS 추출
+   - SLIDES_CSS: deck CSS 중 슬라이드 본문 스타일만 (`:root` 블록은 제외 — 토큰은 TOKENS_DATA로 주입됨)
+   - SLIDES_HTML: <section class="slide">...</section> 전체 verbatim copy
 
-state에 모든 토큰을 담더라도 `applyAllFromState`(또는 동등 일괄 적용 함수)는 **HEX 토큰(bg/footer/text/primary/accent/accent-2)만 setProperty**해야 한다. alpha 토큰(muted/muted-2/border/border-2/ghost)을 setProperty로 명시하면 `:root`에 정의된 `color-mix(in srgb, var(--c-text) X%, transparent)` 표현이 인라인 값으로 덮어씌워져 `--c-text` 변경 추적이 끊긴다.
+3. 메타 정보 결정
+   - DECK_TITLE      : <title> + panel head (예: "Color Tuner — Ferrari Edit · 전라남도 DRT/MaaS")
+   - PROJECT_KEY     : localStorage scope (deck 디렉토리명, 예: "test02-ferrari")
+   - BRAND_TAG       : panel 상단 라벨 (예: "Color Tuner · Ferrari Edit")
+   - BRAND_TITLE_HTML: panel head 큰 제목 (HTML 허용, <br> 가능)
+   - BRAND_SUB       : panel head 메타 (예: "9 tokens · 14 slides · razor precision")
+   - TOTAL_SLIDES    : 정수
+   - LIGHT_SLIDES_INDEX: JSON int[] (라이트 배경 슬라이드 번호 — nav counter tone에 사용)
+   - SLIDE_TITLES    : JSON string[] of length TOTAL_SLIDES (없으면 [] 전달, 자동 "S01" "S02"... 사용)
+   - ACCENT_TOKEN_NAME: Randomize 대상 토큰명 — TOKENS_DATA 중 role/section에 "accent" 또는 "primary"
+                        포함된 첫 토큰을 자동 식별 (예: "--accent" 또는 "--c-primary")
 
-```js
-// ❌ 사고 — alpha 토큰까지 setProperty하면 :root color-mix가 무력화됨
-function applyAllFromState(){
-  Object.keys(state).forEach(k => {
-    document.documentElement.style.setProperty('--' + k, state[k]);
-  });
-}
+4. references/templates/color-tuner.template.html 읽어서 placeholder substitute
+   - {{TOKENS_DATA}} / {{LIGHT_SLIDES_INDEX}} / {{SLIDE_TITLES}}는 JSON.stringify된 string으로 substitute
+   - {{SLIDES_CSS}} / {{SLIDES_HTML}}는 verbatim 삽입
+   - 나머지는 plain text substitute
 
-// ✅ 올바름 — HEX 토큰만 setProperty, alpha 토큰은 :root color-mix가 자동 처리
-function applyAllFromState(){
-  HEX_TOKENS.forEach(k => {
-    document.documentElement.style.setProperty('--' + k, state[k]);
-  });
-}
-```
+5. 결과를 deck 디렉토리/color-tuner.html로 저장
 
-같은 이유로 **localStorage saved default 로드 시 alpha 토큰 무시**:
-```js
-const saved = JSON.parse(raw);
-const savedHex = {};
-HEX_TOKENS.forEach(k => { if (saved[k]) savedHex[k] = saved[k]; });
-state = {...ORIGINAL_DEFAULTS, ...savedHex};
-```
-
-이전 세션의 legacy rgba 캐시가 남아있어도 alpha 토큰은 항상 ORIGINAL_DEFAULTS의 color-mix 표현으로 시작 → Randomize 시 라이트↔다크 자동 전환 정상 작동.
-
-**브라우저 자동 실행 (deck.html 완성 직후)**:
-```bash
-# Windows
-cmd.exe //c start "" "{path}/color-tuner.html"
-# Mac
-open "{path}/color-tuner.html"
-# Linux
-xdg-open "{path}/color-tuner.html"
+6. 브라우저 자동 실행 (Windows: cmd.exe //c start "" "{path}/color-tuner.html")
 ```
 
-**사용자 색상 변경 워크플로**:
+##### Placeholder 목록 (template 헤더 주석에도 동일 명시)
+
+| Placeholder | 형식 | 설명 |
+|------------|------|------|
+| `{{DECK_TITLE}}` | string | <title> + panel head label |
+| `{{PROJECT_KEY}}` | string | localStorage scope |
+| `{{BRAND_TAG}}` | string | uppercase tag above brand-title |
+| `{{BRAND_TITLE_HTML}}` | HTML | multi-line via `<br>` 허용 |
+| `{{BRAND_SUB}}` | string | meta line below title |
+| `{{TOKENS_DATA}}` | JSON array | `[{name, default, role, section, alias}, ...]` |
+| `{{ACCENT_TOKEN_NAME}}` | string | randomize target token (예: `"--accent"`) |
+| `{{SLIDES_CSS}}` | CSS string | deck slide CSS verbatim (NO `:root` block) |
+| `{{SLIDES_HTML}}` | HTML string | `.slide` markup verbatim |
+| `{{TOTAL_SLIDES}}` | integer | 슬라이드 총 개수 |
+| `{{LIGHT_SLIDES_INDEX}}` | JSON int[] | 라이트 배경 슬라이드 번호 |
+| `{{SLIDE_TITLES}}` | JSON string[] | 슬라이드 시맨틱 타이틀 (없으면 `[]`) |
+
+##### 템플릿이 자동 처리하는 사항 (SDA가 신경 쓸 필요 없음)
+
+- 모든 토큰의 picker row 자동 렌더링 (TOKENS_DATA 순회)
+- section 그룹 헤더 자동 삽입
+- 토큰별 양방향 바인딩 (color picker ↔ hex text input)
+- Reset / Save as Default / Randomize Accent 동작
+- Export JSON / CSS 탭 자동 생성 (JSON은 alias 키 사용)
+- Toast 피드백 (Saved / Reset / Copied / Randomized)
+- 슬라이드 네비 (←→ 키, dropdown, ‹/› 버튼, N/Total pill)
+- input/textarea/select 포커스 시 화살표 키 무시
+- 8가지 Randomize Accent 팔레트 고정 (Ferrari Red / Brand Blue / Forest Green / Burnt Orange / Deep Violet / Crimson / Teal Deep / Graphite)
+
+##### 사용자 색상 변경 워크플로
+
 1. SDA가 deck.html + color-tuner.html 동시 생성
 2. 사용자가 color-tuner.html 브라우저에서 색상 조정
 3. (선택) **Save as Default** 클릭 — 브라우저 default 갱신 (localStorage). 다음 세션에서도 그 색상으로 시작
 4. Copy로 새 색상 토큰 클립보드 복사 → 채팅에 붙여넣기
 5. 메인이 deck.html의 `:root` 블록만 부분 Edit (HTML 본체 0% 변경)
-6. (영구 동기화 필요 시) 메인이 color-tuner.html의 코드 DEFAULTS도 함께 Edit — 단 사용자가 Save as Default 사용했다면 localStorage가 우선 적용되므로 보통 불필요
+6. (영구 동기화 필요 시) 메인이 deck.html의 토큰만 갱신 — color-tuner.html은 Save as Default localStorage가 우선 적용되므로 보통 별도 수정 불필요
 
-**산출물 경로 컨벤션**:
+##### 산출물 경로 컨벤션
+
 - `deck.html` — 본 N장 (색상 토큰화 적용)
-- `color-tuner.html` — 색상 조정 도구 (`.slide` 직접 박아넣기, iframe 금지)
+- `color-tuner.html` — 색상 조정 도구 (템플릿 substitute 결과 — iframe 금지)
 
 ---
 

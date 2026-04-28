@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<!--
+  color-tuner.template.html — fixed-format Color Tuner template (claude-design)
+  ============================================================================
+  Owner   : slide-deck-agent (SDA)
+  Purpose : guarantee identical UI/interaction across every deck — SDA only
+            substitutes placeholders, never rewrites JS/CSS/HTML chrome.
+
+  Placeholders (substitute literally — see agents/slide-deck-agent.md):
+    DECK_TITLE          — page title + panel head label
+    PROJECT_KEY         — localStorage scope (e.g. "test02-ferrari")
+    BRAND_TAG           — uppercase tag above brand-title
+    BRAND_TITLE_HTML    — multi-line HTML allowed (uses <br>)
+    BRAND_SUB           — single line meta below brand-title
+    TOKENS_DATA         — JSON array of {name, default, role, section, alias}
+                          `section` triggers a new <div class="section-label">
+                          `alias` is the JSON-export semantic key (snake_case)
+    ACCENT_TOKEN_NAME   — randomize target token name (e.g. "--accent" / "--c-primary")
+    SLIDES_CSS          — deck.html slide-related CSS (NO :root block)
+    SLIDES_HTML         — deck.html .slide markup (verbatim copy)
+    TOTAL_SLIDES        — integer (e.g. 14)
+    LIGHT_SLIDES_INDEX  — JSON int[] (e.g. [2,5,6,9,10,11,12])
+    SLIDE_TITLES        — JSON string[] of length TOTAL_SLIDES (or [] for auto S01..)
+
+  Hard rules (do NOT override):
+    1. Tuner UI chrome colors are FIXED hex (#F5F5F5 body, #181818 text, #8F8F8F label,
+       #D2D2D2 border, #666666 muted, #FFFFFF panel bg, #000 stage bg).
+       These never become tokens — every deck wears the same light editorial tuner.
+    2. Save button + tab underline + toast border use var(--tuner-accent), which falls
+       back through the deck's accent token then to a fixed red.
+    3. JS does NOT hardcode token names — TOKENS_DATA is the single source of truth.
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{DECK_TITLE}}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* =================================================================
+   DECK TOKENS — populated at boot from TOKENS_DATA via JS
+   :root values written by applyColors() on init; defaults below
+   are placeholders that JS overrides immediately.
+   ================================================================= */
+:root{
+  /* deck font fallbacks (slides may override) */
+  --font-heading: "Pretendard","Inter Tight",system-ui,sans-serif;
+  --font-body: "Pretendard","Inter",system-ui,sans-serif;
+  --font-label: "Inter Tight","Space Grotesk","Pretendard",system-ui,sans-serif;
+  --font-mono: "JetBrains Mono","SF Mono",Consolas,monospace;
+
+  /* tuner accent — deck-aware fallback chain */
+  --tuner-accent: var(--accent, var(--c-primary, var(--primary, #DA291C)));
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+/* =================================================================
+   APP CHROME — FIXED light editorial (do not tokenize)
+   ================================================================= */
+html,body{
+  width:100vw;height:100vh;overflow:hidden;
+  background:#F5F5F5;
+  font-family:var(--font-body);
+  color:#181818;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+#app{
+  display:flex;
+  width:100vw;height:100vh;
+}
+
+/* ---- LEFT 70% : preview stage ----------------------------------- */
+#stage{
+  flex:1;
+  position:relative;
+  background:#000;
+  overflow:hidden;
+}
+#stage::before{
+  content:"";
+  position:absolute;top:0;left:0;right:0;height:1px;
+  background:rgba(255,255,255,0.06);
+  z-index:5;
+}
+
+#deck{
+  width:1280px;height:720px;
+  position:absolute;top:0;left:0;
+  transform-origin:top left;
+  overflow:hidden;
+}
+
+/* ---- stage nav (←‹ N/Total ›→) --------------------------------- */
+#nav{
+  position:absolute;
+  bottom:18px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:14px;
+  background:#000;
+  border:1px solid #303030;
+  border-radius:2px;
+  padding:8px 14px;
+  z-index:1000;
+}
+#nav button{
+  background:transparent;border:none;cursor:pointer;
+  color:#FFFFFF;font-family:var(--font-label);
+  font-size:14px;font-weight:700;letter-spacing:1px;
+  width:24px;height:24px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:2px;
+}
+#nav button:hover{background:#181818;}
+#nav button:active{background:var(--tuner-accent);}
+#nav select{
+  background:#000;color:#FFFFFF;
+  border:1px solid #303030;border-radius:2px;
+  font-family:var(--font-label);font-size:11px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;
+  padding:4px 8px;
+  cursor:pointer;outline:none;
+}
+#nav .counter-pill{
+  font-family:var(--font-label);font-size:11px;font-weight:700;
+  letter-spacing:1.5px;color:#FFFFFF;
+  padding:0 6px;min-width:60px;text-align:center;
+}
+
+/* =================================================================
+   RIGHT 30% : picker panel — FIXED light editorial
+   ================================================================= */
+#panel{
+  width:420px;
+  flex-shrink:0;
+  background:#FFFFFF;
+  border-left:1px solid #D2D2D2;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+#panel-head{
+  padding:24px 28px 20px;
+  border-bottom:1px solid #D2D2D2;
+  flex-shrink:0;
+}
+.brand-tag{
+  font-family:var(--font-label);
+  font-size:10px;font-weight:600;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:#8F8F8F;
+}
+.brand-title{
+  font-family:var(--font-heading);
+  font-size:24px;font-weight:700;
+  letter-spacing:-0.02em;line-height:1.15;
+  margin-top:6px;color:#181818;
+}
+.brand-sub{
+  font-family:var(--font-label);
+  font-size:11px;font-weight:500;
+  letter-spacing:0.6px;
+  color:#666666;
+  margin-top:6px;
+}
+
+#tabs{
+  display:flex;
+  border-bottom:1px solid #D2D2D2;
+  flex-shrink:0;
+}
+.tab{
+  flex:1;
+  padding:14px 0;
+  font-family:var(--font-label);
+  font-size:11px;font-weight:600;
+  letter-spacing:1.2px;text-transform:uppercase;
+  color:#8F8F8F;
+  background:transparent;border:none;
+  cursor:pointer;
+  border-bottom:2px solid transparent;
+  transition:color 0.15s, border-color 0.15s;
+}
+.tab.active{
+  color:#181818;
+  border-bottom-color:var(--tuner-accent);
+}
+.tab:hover:not(.active){color:#666666;}
+
+#panel-body{
+  flex:1;overflow-y:auto;
+  padding:20px 28px 24px;
+}
+#panel-body::-webkit-scrollbar{width:6px;}
+#panel-body::-webkit-scrollbar-thumb{background:#D2D2D2;border-radius:3px;}
+
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* picker rows */
+.token-row{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;
+  border-bottom:1px solid #F0F0F0;
+}
+.token-row:last-child{border-bottom:none;}
+.token-meta{flex:1;min-width:0;}
+.token-name{
+  font-family:var(--font-mono);
+  font-size:11px;font-weight:600;
+  color:#181818;
+  letter-spacing:-0.01em;
+}
+.token-role{
+  font-family:var(--font-label);
+  font-size:9.5px;font-weight:500;
+  color:#8F8F8F;
+  letter-spacing:0.6px;text-transform:uppercase;
+  margin-top:3px;
+}
+.token-controls{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.token-controls input[type="color"]{
+  width:32px;height:32px;
+  border:1px solid #D2D2D2;border-radius:2px;
+  padding:0;background:transparent;cursor:pointer;
+}
+.token-controls input[type="color"]::-webkit-color-swatch-wrapper{padding:0;}
+.token-controls input[type="color"]::-webkit-color-swatch{border:none;border-radius:0;}
+.token-controls input[type="text"]{
+  width:78px;
+  font-family:var(--font-mono);
+  font-size:11px;font-weight:500;
+  letter-spacing:-0.01em;
+  text-transform:uppercase;
+  border:1px solid #D2D2D2;
+  border-radius:2px;
+  padding:8px 8px;
+  outline:none;
+  background:#FFFFFF;
+  color:#181818;
+}
+.token-controls input[type="text"]:focus{
+  border-color:#181818;
+}
+
+/* button row */
+.btn-row{
+  display:flex;gap:8px;
+  margin-top:18px;
+}
+.btn{
+  flex:1;
+  padding:11px 0;
+  font-family:var(--font-label);
+  font-size:11px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;
+  border:1px solid #181818;
+  border-radius:2px;
+  background:#FFFFFF;
+  color:#181818;
+  cursor:pointer;
+  transition:background 0.12s, color 0.12s;
+}
+.btn:hover{background:#F5F5F5;}
+.btn:active{background:#181818;color:#FFFFFF;}
+.btn.primary{
+  background:var(--tuner-accent);
+  color:#FFFFFF;
+  border-color:var(--tuner-accent);
+}
+.btn.primary:hover{filter:brightness(0.9);}
+.btn.primary:active{background:#181818;border-color:#181818;}
+.btn.ghost{
+  border-color:#D2D2D2;
+  color:#666666;
+}
+.btn.ghost:hover{background:#F5F5F5;color:#181818;}
+
+.section-label{
+  font-family:var(--font-label);
+  font-size:10px;font-weight:600;
+  letter-spacing:1.2px;text-transform:uppercase;
+  color:#8F8F8F;
+  margin:18px 0 8px;
+}
+.section-label:first-child{margin-top:0;}
+
+/* export */
+.export-toolbar{
+  display:flex;gap:6px;
+  margin-bottom:8px;
+}
+.export-toolbar .seg{
+  flex:1;
+  padding:8px 0;
+  font-family:var(--font-label);
+  font-size:10px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;
+  background:#FFFFFF;
+  color:#666666;
+  border:1px solid #D2D2D2;
+  border-radius:2px;
+  cursor:pointer;
+}
+.export-toolbar .seg.active{
+  background:#181818;color:#FFFFFF;
+  border-color:#181818;
+}
+.export-area{
+  position:relative;
+}
+.export-area textarea{
+  width:100%;
+  height:240px;
+  font-family:var(--font-mono);
+  font-size:11px;line-height:1.55;
+  letter-spacing:-0.01em;
+  border:1px solid #D2D2D2;
+  border-radius:2px;
+  padding:14px;
+  outline:none;
+  resize:none;
+  color:#181818;
+  background:#FAFAFA;
+  white-space:pre;
+}
+.copy-btn{
+  position:absolute;top:8px;right:8px;
+  padding:6px 10px;
+  font-family:var(--font-label);
+  font-size:10px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;
+  background:#181818;color:#FFFFFF;
+  border:none;border-radius:2px;
+  cursor:pointer;
+}
+.copy-btn:hover{background:var(--tuner-accent);}
+
+/* toast */
+#toast{
+  position:fixed;
+  bottom:32px;right:32px;
+  background:#000;color:#FFFFFF;
+  font-family:var(--font-label);
+  font-size:11px;font-weight:600;
+  letter-spacing:1.2px;text-transform:uppercase;
+  padding:12px 18px;
+  border-radius:2px;
+  border:1px solid var(--tuner-accent);
+  opacity:0;
+  pointer-events:none;
+  transform:translateY(8px);
+  transition:opacity 0.18s, transform 0.18s;
+  z-index:9999;
+}
+#toast.show{opacity:1;transform:translateY(0);}
+#toast .dot{
+  display:inline-block;
+  width:6px;height:6px;
+  background:var(--tuner-accent);
+  border-radius:50%;
+  margin-right:8px;
+  vertical-align:middle;
+}
+
+/* =================================================================
+   SLIDES CSS — copied verbatim from deck.html (NO :root block here)
+   ================================================================= */
+{{SLIDES_CSS}}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============================================================
+       LEFT 70% — STAGE
+       ============================================================ -->
+  <div id="stage">
+
+    <div id="deck">
+
+{{SLIDES_HTML}}
+
+    </div><!-- /#deck -->
+
+    <!-- stage nav -->
+    <div id="nav">
+      <button id="prev" title="Previous (←)">&lsaquo;</button>
+      <select id="slide-select" aria-label="Jump to slide"></select>
+      <span class="counter-pill" id="counter-pill">01 / {{TOTAL_SLIDES}}</span>
+      <button id="next" title="Next (→)">&rsaquo;</button>
+    </div>
+
+  </div><!-- /#stage -->
+
+
+  <!-- ============================================================
+       RIGHT 30% — PANEL
+       ============================================================ -->
+  <div id="panel">
+
+    <div id="panel-head">
+      <div class="brand-tag">{{BRAND_TAG}}</div>
+      <div class="brand-title">{{BRAND_TITLE_HTML}}</div>
+      <div class="brand-sub">{{BRAND_SUB}}</div>
+    </div>
+
+    <div id="tabs">
+      <button class="tab active" data-tab="picker">Picker</button>
+      <button class="tab" data-tab="export">Export</button>
+    </div>
+
+    <div id="panel-body">
+
+      <!-- ============ TAB · PICKER ============ -->
+      <div class="tab-pane active" data-pane="picker">
+
+        <div id="picker-rows"></div>
+
+        <div class="btn-row">
+          <button class="btn ghost" id="btn-reset">Reset</button>
+          <button class="btn ghost" id="btn-randomize">Randomize Accent</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="btn-save">Save as Default</button>
+        </div>
+
+      </div><!-- /tab picker -->
+
+
+      <!-- ============ TAB · EXPORT ============ -->
+      <div class="tab-pane" data-pane="export">
+
+        <div class="export-toolbar">
+          <button class="seg active" data-format="json">JSON</button>
+          <button class="seg" data-format="css">CSS</button>
+        </div>
+
+        <div class="export-area">
+          <textarea id="export-text" readonly spellcheck="false"></textarea>
+          <button class="copy-btn" id="copy-btn">Copy</button>
+        </div>
+
+        <div class="section-label" style="margin-top:18px;">Workflow</div>
+        <div style="font-size:12px;line-height:1.65;color:#666666;">
+          1. Adjust tokens in <strong>Picker</strong>.<br>
+          2. Click <strong>Save as Default</strong> to persist locally.<br>
+          3. Copy <strong>CSS</strong> output and paste into<br>
+          &nbsp;&nbsp;&nbsp;<code style="font-family:var(--font-mono);font-size:11px;background:#F5F5F5;padding:2px 6px;border-radius:2px;">deck.html</code> :root block.
+        </div>
+
+      </div>
+
+    </div><!-- /#panel-body -->
+
+  </div><!-- /#panel -->
+
+</div><!-- /#app -->
+
+
+<!-- toast -->
+<div id="toast"><span class="dot"></span><span id="toast-text">Saved</span></div>
+
+
+<script>
+/* =================================================================
+   COLOR TUNER — runtime (template-driven, no hardcoded token names)
+   ================================================================= */
+
+// --- substituted data --------------------------------------------
+const TOKENS_DATA      = {{TOKENS_DATA}};
+const ACCENT_TOKEN     = "{{ACCENT_TOKEN_NAME}}";
+const TOTAL_SLIDES     = {{TOTAL_SLIDES}};
+const LIGHT_SLIDES_RAW = {{LIGHT_SLIDES_INDEX}};
+const SLIDE_TITLES_RAW = {{SLIDE_TITLES}};
+const PROJECT_KEY      = "{{PROJECT_KEY}}";
+const STORAGE_KEY      = "color-tuner:default-colors:" + PROJECT_KEY;
+
+// --- derived registries -------------------------------------------
+const TOKENS = TOKENS_DATA.map(t => t.name);
+const CODE_DEFAULTS = {};
+TOKENS_DATA.forEach(t => { CODE_DEFAULTS[t.name] = t.default; });
+
+// alias map for JSON export (semantic key per token)
+function aliasFor(t){
+  if (t.alias) return t.alias;
+  // auto: --foo-bar → foo_bar
+  return t.name.replace(/^--/, '').replace(/-/g, '_');
+}
+
+// fixed accent randomization palette — 8 brand-grade options
+const ACCENT_PALETTE = [
+  '#DA291C',  // Ferrari Red
+  '#0033A0',  // Brand Blue
+  '#1B5E20',  // Forest Green
+  '#FF6F00',  // Burnt Orange
+  '#6A1B9A',  // Deep Violet
+  '#B71C1C',  // Crimson
+  '#004D40',  // Teal Deep
+  '#212121'   // Graphite
+];
+
+// --- helpers ------------------------------------------------------
+function isHex(v){ return /^#[0-9A-Fa-f]{6}$/.test(v); }
+function normHex(v){
+  if (!v) return null;
+  v = v.trim();
+  if (!v.startsWith('#')) v = '#' + v;
+  if (v.length === 4) {
+    v = '#' + v.slice(1).split('').map(c=>c+c).join('');
+  }
+  return isHex(v) ? v.toUpperCase() : null;
+}
+function getCurrent(){
+  const o = {};
+  TOKENS.forEach(t=>{
+    o[t] = (document.documentElement.style.getPropertyValue(t).trim()
+         || CODE_DEFAULTS[t]).toUpperCase();
+  });
+  return o;
+}
+function applyColors(map){
+  TOKENS.forEach(t=>{
+    if (map[t]){
+      document.documentElement.style.setProperty(t, map[t]);
+    }
+  });
+  syncInputs(map);
+}
+function syncInputs(map){
+  TOKENS.forEach(t=>{
+    const v = map[t];
+    if (!v) return;
+    const cp = document.querySelector(`input[type="color"][data-bind="${t}"]`);
+    const tx = document.querySelector(`input[type="text"][data-bind-text="${t}"]`);
+    if (cp) cp.value = v.toLowerCase();
+    if (tx) tx.value = v.toUpperCase();
+  });
+}
+function loadSavedDefault(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const out = {};
+    TOKENS.forEach(t=>{
+      if (parsed[t] && isHex(parsed[t])) out[t] = parsed[t].toUpperCase();
+    });
+    return Object.keys(out).length ? out : null;
+  }catch(e){ return null; }
+}
+
+// --- render picker rows from TOKENS_DATA --------------------------
+function renderPickerRows(){
+  const root = document.getElementById('picker-rows');
+  let html = '';
+  let lastSection = null;
+  TOKENS_DATA.forEach(t => {
+    if (t.section && t.section !== lastSection){
+      html += `<div class="section-label">${escapeHtml(t.section)}</div>`;
+      lastSection = t.section;
+    }
+    html += `
+      <div class="token-row" data-token="${escapeAttr(t.name)}">
+        <div class="token-meta">
+          <div class="token-name">${escapeHtml(t.name)}</div>
+          <div class="token-role">${escapeHtml(t.role || '')}</div>
+        </div>
+        <div class="token-controls">
+          <input type="color" data-bind="${escapeAttr(t.name)}">
+          <input type="text" data-bind-text="${escapeAttr(t.name)}" maxlength="7">
+        </div>
+      </div>`;
+  });
+  root.innerHTML = html;
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(s){
+  return String(s).replace(/"/g,'&quot;');
+}
+
+// --- render slide-select options ---------------------------------
+function renderSlideSelect(){
+  const sel = document.getElementById('slide-select');
+  const titles = Array.isArray(SLIDE_TITLES_RAW) && SLIDE_TITLES_RAW.length === TOTAL_SLIDES
+    ? SLIDE_TITLES_RAW
+    : null;
+  let html = '';
+  for (let i = 1; i <= TOTAL_SLIDES; i++){
+    const pad = String(i).padStart(2,'0');
+    const label = titles ? `S${pad} · ${escapeHtml(titles[i-1])}` : `S${pad}`;
+    html += `<option value="${i}">${label}</option>`;
+  }
+  sel.innerHTML = html;
+}
+
+// --- toast --------------------------------------------------------
+let toastTimer;
+function toast(msg){
+  const t  = document.getElementById('toast');
+  const tt = document.getElementById('toast-text');
+  tt.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+// --- picker bindings (run after rows rendered) -------------------
+function bindPickers(){
+  TOKENS.forEach(token=>{
+    const cp = document.querySelector(`input[type="color"][data-bind="${token}"]`);
+    const tx = document.querySelector(`input[type="text"][data-bind-text="${token}"]`);
+    if (!cp || !tx) return;
+
+    cp.addEventListener('input', e=>{
+      const v = normHex(e.target.value);
+      if (!v) return;
+      document.documentElement.style.setProperty(token, v);
+      tx.value = v;
+    });
+    tx.addEventListener('input', e=>{
+      const v = normHex(e.target.value);
+      if (!v) return;
+      document.documentElement.style.setProperty(token, v);
+      cp.value = v.toLowerCase();
+    });
+    tx.addEventListener('blur', e=>{
+      const v = normHex(e.target.value);
+      if (v) e.target.value = v;
+      else   e.target.value = (document.documentElement.style.getPropertyValue(token).trim() || CODE_DEFAULTS[token]).toUpperCase();
+    });
+  });
+}
+
+// --- buttons ------------------------------------------------------
+function bindButtons(){
+  document.getElementById('btn-reset').addEventListener('click', ()=>{
+    const saved = loadSavedDefault();
+    if (saved){
+      applyColors(saved);
+      toast('Reset → saved default');
+    } else {
+      applyColors(CODE_DEFAULTS);
+      toast('Reset → code default');
+    }
+  });
+
+  document.getElementById('btn-save').addEventListener('click', ()=>{
+    const cur = getCurrent();
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cur));
+      toast('Saved as default');
+    }catch(e){
+      toast('Save failed');
+    }
+  });
+
+  document.getElementById('btn-randomize').addEventListener('click', ()=>{
+    if (!ACCENT_TOKEN){
+      toast('No accent token defined');
+      return;
+    }
+    const cur = getCurrent();
+    let next = cur[ACCENT_TOKEN];
+    let tries = 0;
+    while (next === cur[ACCENT_TOKEN] && tries < 12){
+      next = ACCENT_PALETTE[Math.floor(Math.random()*ACCENT_PALETTE.length)];
+      tries++;
+    }
+    document.documentElement.style.setProperty(ACCENT_TOKEN, next);
+    syncInputs({ [ACCENT_TOKEN]: next });
+    toast('Accent randomized');
+  });
+}
+
+// --- tabs ---------------------------------------------------------
+function bindTabs(){
+  document.querySelectorAll('.tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelector(`.tab-pane[data-pane="${btn.dataset.tab}"]`).classList.add('active');
+      if (btn.dataset.tab === 'export') refreshExport();
+    });
+  });
+}
+
+// --- export -------------------------------------------------------
+let exportFormat = 'json';
+function bindExport(){
+  document.querySelectorAll('.export-toolbar .seg').forEach(s=>{
+    s.addEventListener('click', ()=>{
+      document.querySelectorAll('.export-toolbar .seg').forEach(b=>b.classList.remove('active'));
+      s.classList.add('active');
+      exportFormat = s.dataset.format;
+      refreshExport();
+    });
+  });
+
+  document.getElementById('copy-btn').addEventListener('click', async ()=>{
+    const ta = document.getElementById('export-text');
+    try{
+      await navigator.clipboard.writeText(ta.value);
+      toast('Copied to clipboard');
+    } catch(e){
+      ta.select();
+      document.execCommand('copy');
+      toast('Copied');
+    }
+  });
+}
+
+function refreshExport(){
+  const cur = getCurrent();
+  const ta  = document.getElementById('export-text');
+  if (exportFormat === 'json'){
+    const colors = {};
+    TOKENS_DATA.forEach(t => {
+      colors[aliasFor(t)] = cur[t.name];
+    });
+    const obj = {
+      colors,
+      meta: {
+        deck: PROJECT_KEY,
+        slides: TOTAL_SLIDES
+      }
+    };
+    ta.value = JSON.stringify(obj, null, 2);
+  } else {
+    let out = ':root{\n';
+    TOKENS.forEach(t=>{
+      out += `  ${t}: ${cur[t]};\n`;
+    });
+    out += '}';
+    ta.value = out;
+  }
+}
+
+/* =================================================================
+   STAGE — slide nav + scaling
+   ================================================================= */
+let cur = 1;
+const lightSlides = new Set(LIGHT_SLIDES_RAW);
+
+function scaleDeck(){
+  const stage = document.getElementById('stage');
+  const deck  = document.getElementById('deck');
+  const w = stage.clientWidth;
+  const h = stage.clientHeight;
+  const s = Math.min(w/1280, h/720) * 0.92;
+  const ox = (w - 1280*s)/2;
+  const oy = (h - 720*s)/2;
+  deck.style.transform = `translate(${ox}px,${oy}px) scale(${s})`;
+}
+function go(n){
+  const prev = document.getElementById('s'+cur);
+  if (prev) prev.classList.remove('active');
+  cur = Math.max(1, Math.min(n, TOTAL_SLIDES));
+  const next = document.getElementById('s'+cur);
+  if (next) next.classList.add('active');
+  document.getElementById('counter-pill').textContent =
+    String(cur).padStart(2,'0') + ' / ' + TOTAL_SLIDES;
+  document.getElementById('slide-select').value = String(cur);
+}
+
+function bindStage(){
+  window.addEventListener('resize', scaleDeck);
+  document.getElementById('prev').addEventListener('click', ()=>go(cur-1));
+  document.getElementById('next').addEventListener('click', ()=>go(cur+1));
+  document.getElementById('slide-select').addEventListener('change', e=>go(parseInt(e.target.value,10)));
+
+  document.addEventListener('keydown', e=>{
+    const tag = (e.target.tagName||'').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    if (e.key === 'ArrowRight' || e.key === ' '){ e.preventDefault(); go(cur+1); }
+    if (e.key === 'ArrowLeft'){ e.preventDefault(); go(cur-1); }
+  });
+}
+
+/* =================================================================
+   BOOT
+   ================================================================= */
+(function init(){
+  renderPickerRows();
+  renderSlideSelect();
+  bindPickers();
+  bindButtons();
+  bindTabs();
+  bindExport();
+  bindStage();
+
+  const saved = loadSavedDefault();
+  applyColors(saved || CODE_DEFAULTS);
+  scaleDeck();
+  go(1);
+  refreshExport();
+})();
+</script>
+
+</body>
+</html>
