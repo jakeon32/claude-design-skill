@@ -15,14 +15,40 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx.enum.shapes import MSO_SHAPE
 from pptx.oxml.ns import qn
 from lxml import etree
 from dataclasses import dataclass, field
 from typing import Optional
+import os
 
 RECT  = 1
 RRECT = 5
 OVAL  = 9
+
+
+# ─────────────────────────────────────────────────────
+# PPTX Fidelity Patterns — LINE_SPACING_PT_TABLE (C-2)
+# ─────────────────────────────────────────────────────
+# PPTX runtime은 한국어 폰트 ascender+descender에 자동 leading을 추가하여
+# ratio 기반 line_spacing이 시각적으로 1.15~1.25배 늘어남.
+# size별로 'PPTX에서 시각 line-height가 X로 보이는 Pt 값'을 사전 캘리브레이션.
+# v3.1 ferrari deck 6 핵심 슬라이드(S03/S04/S07/S08/S13/S14)에서 100% 검증 완료.
+LINE_SPACING_PT_TABLE = [
+    # (size_pt 임계값 ≥, line_spacing_pt)
+    (96, 91),
+    (84, 80),
+    (72, 70),
+    (56, 58),
+    (40, 44),
+    (28, 34),
+    (20, 26),
+    (16, 24),
+    (14, 20),
+    (12, 17),
+    (10, 14),
+    (8,  12),
+]
 
 
 # ─────────────────────────────────────────────────────
@@ -295,6 +321,258 @@ class PptxBuilder:
             r.font.name = self.FB
             r.font.bold = bold
         return tb
+
+    # ── PPTX Fidelity Helpers (v3.1 검증) ────────────
+    # ferrari deck v1→v3.1 에서 도출된 11개 패턴 중 코드 헬퍼화 가능한 4종 + 보조함수.
+    # 디테일은 references/pptx-fidelity-patterns.md 참조.
+
+    LINE_SPACING_PT_TABLE = LINE_SPACING_PT_TABLE
+
+    def line_spacing_pt(self, size_pt, hero=False):
+        """[C-2] font_size(pt) → line_spacing absolute Pt 값.
+
+        PPTX runtime이 한국어 폰트 자동 leading을 추가하므로 ratio 대신
+        Pt 절대값으로 line_spacing 지정. size별 사전 캘리브레이션.
+
+        Parameters
+        ----------
+        size_pt : float
+            font size in points
+        hero : bool
+            True면 한 단계 더 압축 (3% 추가) — 한 줄 hero 전용.
+            두 줄 이상 hero는 F-1 패턴 사용 (multiline 인자).
+        """
+        for thr, sp in self.LINE_SPACING_PT_TABLE:
+            if size_pt >= thr:
+                base = sp
+                break
+        else:
+            base = int(size_pt * 1.4)
+        if hero and size_pt >= 56:
+            # [v3.1 F-1] hero 명시 시 한 단계 더 압축 (3%)
+            base = int(round(base * 0.97))
+        return Pt(base)
+
+    def _zero_margins(self, tf):
+        """[D-3] textframe 내부 padding 모두 0 — 누적 오차 차단."""
+        tf.margin_left = 0
+        tf.margin_right = 0
+        tf.margin_top = 0
+        tf.margin_bottom = 0
+
+    def _no_effect(self, shape):
+        """그림자·effect 제거 — 헬퍼들이 공통으로 호출."""
+        spPr = shape._element.spPr
+        for el in list(spPr):
+            if el.tag == qn('a:effectLst'):
+                spPr.remove(el)
+        etree.SubElement(spPr, qn('a:effectLst'))
+
+    def add_hero_text(self, slide, x, y, w, h, lines_parts, size=80,
+                      line_height=1.0, font=None, align=PP_ALIGN.LEFT,
+                      hero=True, multiline=False):
+        """[C-2 + C-3 + D-3 + F-1] hero/heading 텍스트박스.
+
+        - C-2: size별 Pt 절대값 line_spacing 자동 적용 (size ≥ 40pt)
+        - C-3: vertical_anchor=TOP 명시
+        - D-3: zero margins 강제
+        - F-1: multiline=True 시 line_spacing을 size × line_height로 직접 계산
+               (테이블 압축 우회 — 두 줄 hero 마침표/다음 줄 충돌 방지)
+
+        Parameters
+        ----------
+        lines_parts : list[list[tuple]]
+            각 라인은 run tuple의 list. 다음 형식 지원:
+              2-tuple (text, color) — bold=True 기본, size=base
+              3-tuple (text, color, bold) — size=base
+              4-tuple (text, color, bold, size_override) — 인라인 size 변경
+        hero : bool
+            True면 C-2 hero 압축 적용. 단일 줄 빅 데이터는 False 권장.
+        multiline : bool
+            True면 F-1 (size × line_height 직접 계산), 두 줄 이상 hero용.
+        """
+        font = font or self.FH
+        tb = slide.shapes.add_textbox(x, y, w, h)
+        tf = tb.text_frame
+        tf.word_wrap = True
+        self._zero_margins(tf)                  # D-3
+        tf.vertical_anchor = MSO_ANCHOR.TOP     # C-3
+
+        # F-1 vs C-2 분기
+        if multiline and size >= 40:
+            ls = Pt(int(round(size * line_height)))
+        elif size >= 40:
+            ls = self.line_spacing_pt(size, hero=hero)
+        else:
+            ls = line_height  # ratio (소형 텍스트는 ratio도 OK)
+
+        first = True
+        for line in lines_parts:
+            p = tf.paragraphs[0] if first else tf.add_paragraph()
+            first = False
+            p.alignment = align
+            p.line_spacing = ls
+            for part in line:
+                # 2/3/4-tuple 지원
+                if len(part) == 4:
+                    text, color, bold, size_override = part
+                elif len(part) == 3:
+                    text, color, bold = part
+                    size_override = None
+                else:
+                    text, color = part
+                    bold = True
+                    size_override = None
+                r = p.add_run()
+                r.text = text
+                r.font.size = Pt(size_override if size_override is not None else size)
+                r.font.bold = bold
+                r.font.color.rgb = color
+                r.font.name = font
+        return tb
+
+    def add_body_text(self, slide, x, y, w, h, text, size=12,
+                      color: Optional[RGBColor] = None,
+                      font=None, bold=False,
+                      line_height=1.5, align=PP_ALIGN.LEFT, anchor=None):
+        """[C-2 + D-3] 본문 textbox — size별 Pt 절대값 line_spacing 자동 적용.
+
+        - size ≥ 40pt: hero=True 압축 (대형 단일 라인 호출자용)
+        - 20 ≤ size < 40: hero=False (h2/h3 인라인)
+        - size < 20: 본문 — Pt 절대값 그대로
+        """
+        color = color or self.C['fg']
+        font = font or self.FB
+        tb = slide.shapes.add_textbox(x, y, w, h)
+        tf = tb.text_frame
+        tf.word_wrap = True
+        self._zero_margins(tf)                  # D-3
+        if anchor:
+            tf.vertical_anchor = anchor
+        p = tf.paragraphs[0]
+        p.alignment = align
+        # C-2 size별 자동 분기
+        if size >= 40:
+            p.line_spacing = self.line_spacing_pt(size, hero=True)
+        elif size >= 20:
+            p.line_spacing = self.line_spacing_pt(size, hero=False)
+        else:
+            p.line_spacing = self.line_spacing_pt(size)
+        r = p.add_run()
+        r.text = text
+        r.font.size = Pt(size)
+        r.font.bold = bold
+        r.font.color.rgb = color
+        r.font.name = font
+        return tb
+
+    def add_para_bottom(self, slide, x, y, w, h, text, size=12,
+                        color: Optional[RGBColor] = None, font=None,
+                        bold=False, line_height=1.5, align=PP_ALIGN.LEFT):
+        """[D-2 + D-3 + C-2] flex margin-top:auto → BOTTOM anchor textbox.
+
+        parent box를 의미있게 키워야(예: h=28→44) anchor=BOTTOM 차이가 보임.
+        """
+        color = color or self.C['fg']
+        font = font or self.FB
+        tb = slide.shapes.add_textbox(x, y, w, h)
+        tf = tb.text_frame
+        tf.word_wrap = True
+        self._zero_margins(tf)                          # D-3
+        tf.vertical_anchor = MSO_ANCHOR.BOTTOM          # D-2 핵심
+        p = tf.paragraphs[0]
+        p.alignment = align
+        # body 영역(작은 size) → Pt 절대값
+        if size <= 18:
+            p.line_spacing = self.line_spacing_pt(size)
+        else:
+            p.line_spacing = line_height
+        r = p.add_run()
+        r.text = text
+        r.font.size = Pt(size)
+        r.font.bold = bold
+        r.font.color.rgb = color
+        r.font.name = font
+        return tb
+
+    def add_rule_line(self, slide, x, y, w, color: RGBColor, weight_pt=0.75):
+        """[E-1] 1px rule → 얇은 직사각형 (rect h=0.75pt).
+
+        ※ MSO_CONNECTOR_TYPE 사용 절대 금지. PowerPoint Application.Open()이
+           cxnSp + schemeClr 조합을 거부하는 사례가 있음. rect로 안정화.
+        """
+        h_emu = Pt(weight_pt)
+        s = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x, y, w, h_emu)
+        s.fill.solid()
+        s.fill.fore_color.rgb = color
+        s.line.fill.background()
+        self._no_effect(s)
+        return s
+
+    def add_image_cover(self, slide, path, x, y, w, h):
+        """[B-1] object-fit:cover 시뮬레이션.
+
+        컨테이너 비율과 이미지 비율을 비교 → crop_left/right/top/bottom 적용.
+        path가 없거나 PIL 미설치 시 단색 fallback rect.
+        """
+        if not os.path.exists(path):
+            s = slide.shapes.add_shape(RECT, x, y, w, h)
+            s.fill.solid()
+            s.fill.fore_color.rgb = self.C.get('fg', RGBColor(0x18, 0x18, 0x18))
+            s.line.fill.background()
+            return None
+
+        try:
+            from PIL import Image
+        except ImportError:
+            return slide.shapes.add_picture(path, x, y, width=w, height=h)
+
+        try:
+            with Image.open(path) as im:
+                iw, ih = im.size
+        except Exception:
+            return slide.shapes.add_picture(path, x, y, width=w, height=h)
+
+        img_ratio = iw / ih
+        cw_emu = int(w)
+        ch_emu = int(h)
+        cont_ratio = cw_emu / ch_emu
+
+        pic = slide.shapes.add_picture(path, x, y, width=w, height=h)
+
+        if img_ratio > cont_ratio:
+            # 이미지가 더 가로형 → 좌우 crop
+            keep = cont_ratio / img_ratio
+            crop = (1 - keep) / 2
+            try:
+                pic.crop_left = crop
+                pic.crop_right = crop
+            except AttributeError:
+                self._set_picture_crop(pic, l=crop, r=crop)
+        elif img_ratio < cont_ratio:
+            # 이미지가 더 세로형 → 위아래 crop
+            keep = img_ratio / cont_ratio
+            crop = (1 - keep) / 2
+            try:
+                pic.crop_top = crop
+                pic.crop_bottom = crop
+            except AttributeError:
+                self._set_picture_crop(pic, t=crop, b=crop)
+        return pic
+
+    def _set_picture_crop(self, pic, l=0, r=0, t=0, b=0):
+        """python-pptx <0.6.21 fallback — XML srcRect 직접 조작."""
+        blipFill = pic._element.blipFill
+        srcRect = blipFill.find(qn('a:srcRect'))
+        if srcRect is None:
+            srcRect = etree.SubElement(blipFill, qn('a:srcRect'))
+            blip = blipFill.find(qn('a:blip'))
+            if blip is not None:
+                blip.addnext(srcRect)
+        if l: srcRect.set('l', str(int(l * 100000)))
+        if r: srcRect.set('r', str(int(r * 100000)))
+        if t: srcRect.set('t', str(int(t * 100000)))
+        if b: srcRect.set('b', str(int(b * 100000)))
 
 
 # ─────────────────────────────────────────────────────

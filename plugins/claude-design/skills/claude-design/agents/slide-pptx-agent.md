@@ -104,15 +104,85 @@ def content(prs, b: PptxBuilder):
 build_pptx([cover, content], output='D:/tmp/output.pptx', ds=ds)
 ```
 
+## 정밀 보정 패턴 — Layout Fidelity 11종
+
+ferrari deck v1→v3.1 검증으로 도출. 한국어 hero·data 영역에서 PPTX runtime이 ascender+descender에 자동 leading을 추가해 시각 line-height가 1.15~1.25배 늘어나는 현상의 보상 규칙. **6 핵심 슬라이드에서 100% 해소율 검증 완료**. 디테일은 `references/pptx-fidelity-patterns.md`.
+
+| 코드 | 명칭 | 적용 위치 | 핵심 |
+|------|------|----------|------|
+| **C-1** | line-height ratio 매핑 (table cell) | table cell | 본문 `p.line_spacing = 1.5`, 헤더 `1.4`, 영문/숫자 `1.3` |
+| **C-2** | size별 Pt 절대값 line_spacing | size ≥ 40pt hero/data | ratio 대신 Pt 절대값. `LINE_SPACING_PT_TABLE` 참조 |
+| **C-3** | hero anchor TOP | `add_hero_mixed` | `tf.vertical_anchor = MSO_ANCHOR.TOP` 명시 |
+| **D-1'** | hero guard footer 사전 배치 | statement·closing 슬라이드 | clamp 면제, footer Y=645 사전 배치 |
+| **D-2** | mt-auto BOTTOM anchor | flex 자식 mt-auto | parent box 확장 + `anchor=MSO_ANCHOR.BOTTOM` |
+| **D-3** | textbox margin = 0 강제 | 모든 textbox helper | `_zero_margins(tf)` 호출 |
+| **F-1** | multiline hero | 두 줄 이상 hero | `Pt(int(round(size * line_height)))` 직접 계산 |
+| **B-1** | object-fit:cover crop | 사진 textbox | PIL로 비율 측정 → `pic.crop_left/right/top/bottom` |
+| **E-1** | 1px rule → rect 0.75pt | 모든 1px divider | **`MSO_CONNECTOR_TYPE` 사용 절대 금지** |
+| (rule) | 단일 줄 빅 데이터 hero=False | 단일 줄 data-xl/md | `add_hero_mixed(..., hero=False)` |
+| (rule) | size_override (4-tuple) | 인라인 size 변경 | `(text, color, bold, size_override)` |
+
+### 핵심 강제 규칙 (위반 시 시각 결함 확정)
+
+**E-1: connector 금지** — `MSO_CONNECTOR_TYPE.STRAIGHT` 사용 시 PowerPoint Application.Open()이 cxnSp + schemeClr 조합을 거부하는 사례가 보고됨. 모든 1px 라인은 `MSO_SHAPE.RECTANGLE` + `h = Pt(0.75)` 로 구현.
+
+```python
+def add_rule_line(slide, x, y, w, color, weight_pt=0.75):
+    s = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x, y, w, Pt(weight_pt))
+    s.fill.solid()
+    s.fill.fore_color.rgb = color
+    s.line.fill.background()
+    return s
+```
+
+**C-2: LINE_SPACING_PT_TABLE** — size별 Pt 절대값 line_spacing 매핑.
+
+| size_pt ≥ | line_spacing_pt |
+|-----------|-----------------|
+| 96 | 91 |
+| 84 | 80 |
+| 72 | 70 |
+| 56 | 58 |
+| 40 | 44 |
+| 28 | 34 |
+| 20 | 26 |
+| 16 | 24 |
+| 14 | 20 |
+| 12 | 17 |
+
+`tools/pptx_utils.py`의 `PptxBuilder.line_spacing_pt(size, hero=False)` 헬퍼로 자동 적용.
+
+**D-3: zero margins** — 모든 textbox 생성 직후 `_zero_margins(tf)` 호출. 누적 오차 차단.
+
+**F-1 vs C-2 분기**:
+- 한 줄 hero(size ≥ 40pt) → C-2 테이블 (`hero=True` 시 3% 추가 압축)
+- 두 줄 이상 hero → F-1 직접 계산 (`Pt(int(round(size * line_height)))`)
+
+### 헬퍼별 패턴 매트릭스
+
+| 헬퍼 | C-2 | C-3 | D-3 | F-1 |
+|------|-----|-----|-----|-----|
+| `add_hero_text` | O | O | O | O (multiline=True) |
+| `add_body_text` | O | (옵션) | O | — |
+| `add_image_cover` | — | — | — | — (B-1 전용) |
+| `add_rule_line` | — | — | — | — (E-1 전용) |
+
 ## HTML → PPTX 변환 체크리스트
 
-각 슬라이드를 변환할 때 `references/pptx-alignment-patterns.md`의 규칙 적용:
+각 슬라이드를 변환할 때 `references/pptx-alignment-patterns.md` + `references/pptx-fidelity-patterns.md` 규칙 적용:
 
 - [ ] oval/shape과 나란한 textbox에 `anchor=MSO_ANCHOR.MIDDLE` 적용
 - [ ] 동일 Y 배치 시 textbox 높이 = shape 높이로 맞춤
 - [ ] pill/badge textbox에 `anchor=MSO_ANCHOR.MIDDLE` 적용
 - [ ] 좌측 컬러 바 두께 최소 `Inches(0.05)` 이상
 - [ ] emoji 아이콘 textbox에 `font='Segoe UI Emoji'` 명시
+- [ ] hero textbox `vertical_anchor = MSO_ANCHOR.TOP` 명시 (C-3)
+- [ ] size ≥ 40pt → `line_spacing_pt(size, hero=True)` (C-2)
+- [ ] 두 줄 이상 hero → `multiline=True` 인자 (F-1)
+- [ ] 모든 textbox `_zero_margins(tf)` 호출 (D-3)
+- [ ] 1px divider → `add_rule_line(..., weight_pt=0.75)` (E-1, **connector 금지**)
+- [ ] statement·closing 슬라이드 footer Y = 645 사전 배치 (D-1')
+- [ ] 사진 → `add_image_cover` (B-1)
 
 ## 검증 파이프라인
 

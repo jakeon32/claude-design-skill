@@ -753,6 +753,46 @@ document.addEventListener('keydown', e => {
 - 한국어 → `references/korean-typography.md` 자동 적용
 - 스타일 정의 → `references/styles/[style].md` 로드 후 주입
 
+### PPTX 변환 호환 typography 토큰 (필수)
+
+slide-pptx-agent로 변환 시 visual fidelity를 보장하기 위해, hero·data·heading·body 영역의 `font-size` × `line-height` 조합은 다음 토큰 안에서 선택한다. 이 범위를 벗어나면 PPTX runtime의 한국어 폰트 자동 leading(시각 1.15~1.25배 확장) 때문에 위 줄 마침표↔다음 줄 첫 자가 충돌하거나 hero가 footer를 침범한다.
+
+```css
+/* PPTX 친화 typography — slide-pptx-agent 변환 시 fidelity 보장 */
+.hero            { font-size: 84~96px;  line-height: 0.92; }   /* 단일 줄 */
+.hero.multiline  { font-size: 72~96px;  line-height: 1.04; }   /* 두 줄 이상 */
+.data-xl         { font-size: 96px;     line-height: 1.0; }    /* 단일 줄 빅 데이터 */
+.data-md         { font-size: 72px;     line-height: 1.0; }
+.h1              { font-size: 56px;     line-height: 1.05; }
+.h2              { font-size: 40px;     line-height: 1.05; }
+.h3              { font-size: 28px;     line-height: 1.05; }
+.h4              { font-size: 20px;     line-height: 1.2; }
+.body-lead       { font-size: 18px;     line-height: 1.5; }
+.body            { font-size: 16px;     line-height: 1.5; }
+.small           { font-size: 14px;     line-height: 1.4; }
+.caption         { font-size: 12px;     line-height: 1.3; }
+
+.slide {
+  width: 1280px; height: 720px;
+  padding: 56px 80px 80px 80px;   /* footer reserved 80px */
+}
+```
+
+**왜 강제인가**:
+- PPTX runtime은 한국어 폰트 ascender+descender에 자동 leading을 추가 → CSS `line-height`가 시각적으로 1.15~1.25배 늘어남.
+- 한 줄 hero는 `0.92`, 두 줄 이상 hero는 `1.04`로 미리 보상해야 PPTX 변환 후에도 의도한 조판이 유지된다.
+- 단일 줄 빅 데이터(`95M / 125.9 / 7M / 3 / 1·tap`)는 `line-height: 1.0` + 위 라벨과 22~36px gap 확보.
+- 두 줄 hero는 한국어 마침표(.) descender 침범 방지 차원에서 `0.96~1.04` 범위 안에서 결정.
+- footer reserved `80px` (HTML 660~720) — hero 슬라이드는 footer Y=645로 사전 배치(D-1' hero guard).
+
+**적용 사례**:
+- 단일 줄 hero: `<h1 class="hero">전라남도 도서지역</h1>` (size 84, lh 0.92)
+- 두 줄 hero: `<h1 class="hero multiline">완성형 MaaS로.<br>플랫폼 전환.</h1>` (size 72, lh 1.04)
+- 단일 줄 데이터: `<span class="data-xl">95<span class="data-md">M</span></span>` (size 96/72, lh 1.0)
+
+**연결**: 본 토큰은 slide-pptx-agent가 사용하는 `LINE_SPACING_PT_TABLE` 과 1:1 짝.
+자세한 패턴 매트릭스 11종은 `references/pptx-fidelity-patterns.md` 참조.
+
 ### 색상 토큰화 (필수) + Color Tuner 자동 생성
 
 **색상 토큰화 의무**: 모든 색상은 `:root` CSS 변수로 정의. 인라인 `#hex` 또는 `rgb(...)` 직접 사용 금지. 변수 한 군데 변경으로 N장 전체에 즉시 반영되어야 한다.
