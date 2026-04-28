@@ -16,15 +16,21 @@ sub-agent끼리 직접 호출 금지 — 메인이 orchestrate.
 ## 플러그인 구조
 
 ```
+.claude-plugin/
+  marketplace.json        ← 로컬 마켓플레이스 메타 (name: "claude-design-local")
+
 plugins/claude-design/
-  package.json
-  skills/claude-design/
-    SKILL.md              ← 스킬 진입점
-    agents/               ← 에이전트 13개
+  .claude-plugin/
+    plugin.json           ← 플러그인 매니페스트 (name/version/description/author)
+  package.json            ← npm-style 메타 (옵션)
+  agents/                 ← 에이전트 13개 (Claude Code 자동 등록)
                             (project-planner / design-system-manager /
                              prototype / slide-deck / slide-qa / slide-pptx /
                              document / other / visual-refiner +
                              선택적: copywriting / animation / responsive / accessibility)
+                            → Agent tool 호출: subagent_type "claude-design:<agent-name>"
+  skills/claude-design/
+    SKILL.md              ← 스킬 진입점 (Skill 호출 시 namespace: "claude-design:claude-design")
     references/           ← 디자인 레퍼런스
                             (korean-typography, output-common, color-rules,
                              cover-patterns, photo-layouts, pptx-alignment-patterns,
@@ -38,6 +44,19 @@ plugins/claude-design/
       make_compare.py     ← HTML vs PPTX 비교 이미지
       requirements.txt
 ```
+
+## 설치 (로컬 개발)
+
+`/plugin marketplace add` 는 인터랙티브 prompt 모드라 **한 줄씩** 따로 입력 (paste 한방 X):
+
+```
+/plugin marketplace add        ← Enter
+D:\claude\claude-skills\claude-design-v3   ← prompt에 paste, Enter
+/plugin install claude-design@claude-design-local   ← Enter
+/reload-plugins                ← Enter
+```
+
+자세한 가이드: `INSTALL.md`. 설치 후 Agent tool에서 `claude-design:project-planner` 등 13개 sub-agent 호출 가능. SKILL은 `claude-design:claude-design` namespace로 노출.
 
 ## PPTX 도구 설치
 

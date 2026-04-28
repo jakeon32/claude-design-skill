@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-design-local",
+  "description": "Local development marketplace for the claude-design plugin",
+  "owner": {
+    "name": "Jake"
+  },
+  "plugins": [
+    {
+      "name": "claude-design",
+      "description": "Claude Design methodology skill — UI prototypes, slide decks, A4 documents, and free-form graphics with PowerPoint conversion",
+      "category": "design",
+      "source": {
+        "source": "directory",
+        "path": "./plugins/claude-design"
+      }
+    }
+  ]
+}
