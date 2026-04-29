@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<!--
+  showcase-grid.template.html — Slide Deck 1차 호출 산출물 표준 포맷
+  목적: Cover 3안 + 본문 2안을 한 화면에 비교 가능한 grid로 표시
+  치환 토큰: {{title}} / {{subtitle}} / {{cover_a_png}}, {{cover_b_png}}, {{cover_c_png}} / {{body_a_png}}, {{body_b_png}} / {{cover_*_caption}} / {{body_*_caption}}
+  배경 오프화이트 + box-shadow로 라이트·다크 슬라이드 가장자리 모두 visible
+  6-col 통일 grid (cover row span 2×3 / body row span 3×2)로 좌우 정렬 일치
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>{{title}} — Showcase</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; word-break: keep-all; }
+  body {
+    font-family: 'Pretendard', sans-serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 32px 16px;
+  }
+  .page {
+    width: 96vw;
+    max-width: 1920px;
+    margin: 0 auto;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #1a1a1a;
+  }
+  header p {
+    font-size: 14px;
+    color: #6b7280;
+    margin-top: 6px;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  .row.cover-row > .slide { grid-column: span 2; }   /* 2 + 2 + 2 = 6 */
+  .row.body-row > .slide  { grid-column: span 3; }   /* 3 + 3 = 6 */
+
+  .slide {
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .slide:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
+  }
+  .slide img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+  .caption {
+    padding: 12px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #4b5563;
+    border-top: 1px solid #e5e7eb;
+    background: #fafafa;
+  }
+  .caption .label {
+    color: #1a1a1a;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+
+  @media (max-width: 1024px) {
+    .row.cover-row { grid-template-columns: repeat(3, 1fr); }
+    .row.cover-row > .slide { grid-column: span 1; }
+    .row.body-row { grid-template-columns: repeat(2, 1fr); }
+    .row.body-row > .slide { grid-column: span 1; }
+  }
+  @media (max-width: 640px) {
+    .row.cover-row, .row.body-row { grid-template-columns: 1fr; }
+    .row.cover-row > .slide, .row.body-row > .slide { grid-column: span 1; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>{{title}} — Showcase</h1>
+      <p>{{subtitle}}</p>
+    </header>
+
+    <section class="row cover-row" aria-label="Cover 3안">
+      <article class="slide">
+        <img src="{{cover_a_png}}" alt="Cover-A">
+        <div class="caption"><span class="label">COVER-A</span>{{cover_a_caption}}</div>
+      </article>
+      <article class="slide">
+        <img src="{{cover_b_png}}" alt="Cover-B">
+        <div class="caption"><span class="label">COVER-B</span>{{cover_b_caption}}</div>
+      </article>
+      <article class="slide">
+        <img src="{{cover_c_png}}" alt="Cover-C">
+        <div class="caption"><span class="label">COVER-C</span>{{cover_c_caption}}</div>
+      </article>
+    </section>
+
+    <section class="row body-row" aria-label="본문 2안">
+      <article class="slide">
+        <img src="{{body_a_png}}" alt="Body-A">
+        <div class="caption"><span class="label">BODY-A</span>{{body_a_caption}}</div>
+      </article>
+      <article class="slide">
+        <img src="{{body_b_png}}" alt="Body-B">
+        <div class="caption"><span class="label">BODY-B</span>{{body_b_caption}}</div>
+      </article>
+    </section>
+  </div>
+</body>
+</html>

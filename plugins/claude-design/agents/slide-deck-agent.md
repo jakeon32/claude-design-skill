@@ -1246,6 +1246,30 @@ v3 커버: [레이아웃] × [비율] × [경계표현]
 | `deck.html` | 본 작업 N장 슬라이드 (1280×720, DESIGN_SYSTEM 적용) | `_test/outputs/[name]/deck.html` |
 | `color-tuner.html` | 5개 토큰(bg/text/border/accent/scan) 인터랙티브 픽커 | `_test/outputs/[name]/color-tuner.html` |
 
+---
+
+## 1차 호출 showcase-grid.html 산출 의무 (절대 규칙)
+
+1차 호출 종료 시 5장 PNG + `showcase-grid.html` 페어로 출력. **showcase-grid.html은 표준 템플릿을 반드시 사용**:
+
+```
+references/templates/showcase-grid.template.html
+```
+
+이 템플릿의 placeholder 토큰을 5장 PNG 경로 + 캡션으로 치환:
+- `{{title}}` → BRIEF의 프로젝트명
+- `{{subtitle}}` → "Cover 3안 + 본문 2안 = 5장 비교"
+- `{{cover_a_png}}, {{cover_b_png}}, {{cover_c_png}}` → 각 PNG 절대경로
+- `{{body_a_png}}, {{body_b_png}}` → 각 PNG 절대경로
+- `{{cover_*_caption}}, {{body_*_caption}}` → 그리드 + 키워드 (예: `1COL-CENTER / WHITESPACE`)
+
+**금지**: 자체 해석으로 grid 구조·배경·레이아웃을 재정의 (예: 슬라이드쇼 1장씩 표시 형태 등). 템플릿 그대로 사용.
+
+**템플릿 핵심 규약**:
+- 6-col 통일 grid (cover row span 2×3 / body row span 3×2) → 좌우 정렬 일치
+- 배경 오프화이트(#f5f5f5) + box-shadow → 라이트·다크 슬라이드 가장자리 모두 visible
+- 좌우 padding 96vw → 슬라이드 카드 max 크기
+
 **color-tuner.html의 의의**: 사용자가 deck.html의 색상 토큰을 실시간으로 조정·미리보기 가능. DESIGN_SYSTEM의 5개 핵심 색상이 deck에서 실제로 사용되는 위치와 매칭. 어제(2026-04-29) Color Tuner 인터랙티브 픽커 패턴 적립됨 (memory: `project_color_tuner.md`).
 
 **자기 체크**: 2차 호출 종료 직전 — `deck.html` 만 만들고 `color-tuner.html` 없으면 즉시 추가 생성.
