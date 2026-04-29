@@ -76,7 +76,9 @@ description: "Claude Design — 모든 모드 공통 수정 에이전트. 초안
 
 초안 생성 완료 후 수정 요청 전에 항상 실행. 사용자가 요청하지 않아도 자동 수행.
 
-**실행 순서**: 코드 분석 → 스크린샷 → 시각 검사 → 결과 출력
+**호출 시점**: SKILL.md MANDATORY GATE STEP 5 (모든 모드 자동·필수). 메인이 sub-agent로 위임 — 메인 직접 take_screenshot으로 self QA 처리 금지 (검증 깊이 보장 위해 sub-agent 시스템 프롬프트로 동작).
+
+**실행 순서**: 코드 분석 → 스크린샷(PNG 저장) → 시각 검사 → 5차원 평가 → 자동 수정 → 결과 출력
 
 ### 1단계: 코드 분석 QA (HTML 파일 읽어서)
 
@@ -99,6 +101,11 @@ description: "Claude Design — 모든 모드 공통 수정 에이전트. 초안
 | terminal-cli, win98-retro | 픽셀 폰트, low-contrast 배경 |
 
 ### 2단계: 스크린샷 시각 QA
+
+**캡처 방식 (절대 규칙)**:
+- 모든 슬라이드/페이지를 `take_screenshot(filePath: "_test/outputs/[name]/refiner-s{N}.png")` 로 **PNG 파일 저장 후 Read**
+- vision attach (filePath 미지정) 사용 금지 — 다른 sub-agent 공유·archive·핸드오프 미지원
+- 산출물 경로: `_test/outputs/[name]/refiner-s1.png ~ refiner-sN.png` (sda의 `deck-s{N}.png`와 별도 — 비교 가능)
 
 스크린샷 찍은 후 Claude가 이미지를 직접 보고 아래 항목을 눈으로 판단:
 
