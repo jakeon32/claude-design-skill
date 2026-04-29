@@ -424,7 +424,7 @@ html,body{
 
         <div class="btn-row">
           <button class="btn ghost" id="btn-reset">Reset</button>
-          <button class="btn ghost" id="btn-randomize">Randomize Accent</button>
+          <button class="btn ghost" id="btn-randomize" title="Primary + Accent + Secondary 동시 변경 (Dark variant 자동 생성)">Randomize Palette</button>
         </div>
         <div class="btn-row">
           <button class="btn primary" id="btn-save">Save as Default</button>
@@ -504,6 +504,75 @@ const ACCENT_PALETTE = [
   '#004D40',  // Teal Deep
   '#212121'   // Graphite
 ];
+
+// --- accent group — randomize에서 같이 변경할 토큰 자동 식별 -------------
+// rule: section 필드에 "accent" / "primary" 포함된 모든 토큰을 한 그룹으로 묶음
+// 예: --c-primary, --c-accent, --c-secondary, --c-primary-dark — 모두 함께 변경
+function findAccentGroup(){
+  const group = [];
+  TOKENS_DATA.forEach(t => {
+    const sec = (t.section || '').toLowerCase();
+    const role = (t.role || '').toLowerCase();
+    if (sec.includes('accent') || sec.includes('primary') || role.includes('accent') || role.includes('primary')){
+      group.push(t.name);
+    }
+  });
+  // ACCENT_TOKEN이 그룹에 없으면 추가 (fallback 보장)
+  if (ACCENT_TOKEN && !group.includes(ACCENT_TOKEN)) group.push(ACCENT_TOKEN);
+  return group;
+}
+const ACCENT_GROUP = findAccentGroup();
+
+// hex → HSL 변환 (dark variant 생성용)
+function hexToHsl(hex){
+  const r = parseInt(hex.substr(1,2), 16) / 255;
+  const g = parseInt(hex.substr(3,2), 16) / 255;
+  const b = parseInt(hex.substr(5,2), 16) / 255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h = 0, s = 0, l = (max+min)/2;
+  if (max !== min){
+    const d = max - min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h = (g-b)/d + (g<b?6:0); break;
+      case g: h = (b-r)/d + 2; break;
+      case b: h = (r-g)/d + 4; break;
+    }
+    h /= 6;
+  }
+  return [h*360, s*100, l*100];
+}
+function hslToHex(h, s, l){
+  s /= 100; l /= 100;
+  const c = (1 - Math.abs(2*l - 1)) * s;
+  const x = c * (1 - Math.abs((h/60) % 2 - 1));
+  const m = l - c/2;
+  let r=0, g=0, b=0;
+  if (h < 60)      { r=c; g=x; b=0; }
+  else if (h<120)  { r=x; g=c; b=0; }
+  else if (h<180)  { r=0; g=c; b=x; }
+  else if (h<240)  { r=0; g=x; b=c; }
+  else if (h<300)  { r=x; g=0; b=c; }
+  else             { r=c; g=0; b=x; }
+  const toHex = v => Math.round((v+m)*255).toString(16).padStart(2,'0');
+  return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+// base color 기반 token 별 variant 생성 (dark 토큰은 -20% lightness, light 토큰은 +50%)
+function variantFor(tokenName, baseHex){
+  const [h, s, l] = hexToHsl(baseHex);
+  const lower = tokenName.toLowerCase();
+  if (lower.includes('-dark') || lower.includes('-900') || lower.includes('-800')){
+    return hslToHex(h, s, Math.max(10, l - 25));  // dark variant
+  }
+  if (lower.includes('-50') || lower.includes('-100') || lower.includes('-light')){
+    return hslToHex(h, Math.max(s - 10, 20), Math.min(l + 50, 95));  // light tint variant
+  }
+  if (lower.includes('secondary')){
+    // secondary = base hue + 30deg shift (analogous color)
+    return hslToHex((h + 30) % 360, s, l);
+  }
+  return baseHex;  // primary / accent — base color 그대로
+}
 
 // --- helpers ------------------------------------------------------
 function isHex(v){ return /^#[0-9A-Fa-f]{6}$/.test(v); }
@@ -663,20 +732,28 @@ function bindButtons(){
   });
 
   document.getElementById('btn-randomize').addEventListener('click', ()=>{
-    if (!ACCENT_TOKEN){
+    if (!ACCENT_GROUP || ACCENT_GROUP.length === 0){
       toast('No accent token defined');
       return;
     }
+    // base color 1개 픽 (이전과 다른 색 보장)
     const cur = getCurrent();
-    let next = cur[ACCENT_TOKEN];
+    const refToken = ACCENT_TOKEN || ACCENT_GROUP[0];
+    let baseColor = cur[refToken];
     let tries = 0;
-    while (next === cur[ACCENT_TOKEN] && tries < 12){
-      next = ACCENT_PALETTE[Math.floor(Math.random()*ACCENT_PALETTE.length)];
+    while (baseColor === cur[refToken] && tries < 12){
+      baseColor = ACCENT_PALETTE[Math.floor(Math.random()*ACCENT_PALETTE.length)];
       tries++;
     }
-    document.documentElement.style.setProperty(ACCENT_TOKEN, next);
-    syncInputs({ [ACCENT_TOKEN]: next });
-    toast('Accent randomized');
+    // ACCENT_GROUP 모든 토큰에 variant 적용 (primary=base, dark=-25% L, secondary=+30deg H, etc)
+    const updates = {};
+    ACCENT_GROUP.forEach(tname => {
+      updates[tname] = variantFor(tname, baseColor);
+      document.documentElement.style.setProperty(tname, updates[tname]);
+    });
+    syncInputs(updates);
+    const count = ACCENT_GROUP.length;
+    toast(count === 1 ? 'Accent randomized' : `Palette randomized (${count} tokens)`);
   });
 }
 
