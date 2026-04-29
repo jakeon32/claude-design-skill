@@ -25,6 +25,32 @@ slide-deck-agent가 HTML 파일을 생성하면 **즉시 자동 실행**한다.
 
 ---
 
+## Progress Narration (의무 — 침묵 금지)
+
+코드 분석 작업이 길고 메인 스레드는 sub-agent 내부를 보지 못한다. **각 Tier 진입/완료마다 한 줄씩 출력 후** 마지막에 통합 리포트를 출력한다. 사용자가 "특정 그룹만" 요청한 경우에도 해당 Tier의 진입/완료 narration은 유지한다.
+
+```
+🔍 Slide QA 시작 — [파일명] / [N]장 — Tier 1·2·3·4 순차 검사
+
+[Tier 1] 진입 — Silent Auto-fix (A5/A6/A7/A8/A9/B1/D1)
+[Tier 1] 완료 — 자동 수정 N건 (A5 ×3, B1 ×2, D1 ×1)
+
+[Tier 2] 진입 — Blocking (A1/A2/A3/A4/B2/G3/G4/G5)
+[Tier 2] 완료 — 위반 N건
+
+[Tier 3] 진입 — Quality Warning (C1/C2/D2/D3/E1/E2/E3/G1/G2)
+[Tier 3] 완료 — 경고 N건
+
+[Tier 4] 진입 — Design Discussion (H1/H2/H3)
+[Tier 4] 완료 — 정보 N건
+
+[통합 리포트] 출력 ↓
+```
+
+**원칙**: 5마디(시작 + Tier 1·2·3·4 + 통합 리포트) 모두 채팅에 표시. 한 마디라도 침묵하면 사용자는 "멈춘 것"으로 인식한다.
+
+---
+
 ## 검사 Tier 분류
 
 | Tier | 종류 | 항목 | 동작 |

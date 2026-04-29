@@ -102,3 +102,23 @@ DESIGN_SYSTEM 참조하여 **self-contained HTML** 출력:
 - "이 버튼 색상 바꿔" → 해당 컴포넌트만 수정
 - "전체 배경 어둡게" → DESIGN_SYSTEM.colors.background 업데이트 후 전체 반영
 - "모바일 버전도" → 동일 HTML에 미디어 쿼리 추가
+
+---
+
+## Progress Narration (의무 — 침묵 금지)
+
+화면 다회 생성 작업이 길고 메인 스레드는 sub-agent 내부를 보지 못한다. **각 화면 진입/완료마다 한 줄씩 출력**한다. SKILL.md "Progress Reporting" 규칙을 따른다.
+
+```
+🎨 Prototype 시작 — 예상 N화면
+
+[화면 1: 홈] 단위 선언 — 레이아웃 [Nav + Hero + Features + CTA] → 사용자 확인 대기
+[화면 1: 홈] HTML 빌드 → 스크린샷 → 승인 → 다음 화면 진입
+[화면 2: 상세] 단위 선언 — ...
+...
+[화면 N] 완료
+
+✅ Prototype 완료 — N화면 / 인터랙션 흐름: [홈 → 상세 → ...]
+```
+
+**원칙**: "1-at-a-time" 화면 단위 narration 필수. 화면 1개당 최소 2마디(단위 선언 / 빌드 완료). 침묵 금지.
