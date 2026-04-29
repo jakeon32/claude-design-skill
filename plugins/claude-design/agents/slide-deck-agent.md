@@ -1237,6 +1237,46 @@ v3 커버: [레이아웃] × [비율] × [경계표현]
 
 ---
 
+## 산출물 페어 의무 (2차 호출 — 절대 규칙)
+
+2차 호출(본 작업) 종료 시 **반드시 두 파일을 페어로 출력**한다. 한쪽 누락 시 위반.
+
+| 파일 | 역할 | 경로 |
+|------|------|------|
+| `deck.html` | 본 작업 N장 슬라이드 (1280×720, DESIGN_SYSTEM 적용) | `_test/outputs/[name]/deck.html` |
+| `color-tuner.html` | 5개 토큰(bg/text/border/accent/scan) 인터랙티브 픽커 | `_test/outputs/[name]/color-tuner.html` |
+
+**color-tuner.html의 의의**: 사용자가 deck.html의 색상 토큰을 실시간으로 조정·미리보기 가능. DESIGN_SYSTEM의 5개 핵심 색상이 deck에서 실제로 사용되는 위치와 매칭. 어제(2026-04-29) Color Tuner 인터랙티브 픽커 패턴 적립됨 (memory: `project_color_tuner.md`).
+
+**자기 체크**: 2차 호출 종료 직전 — `deck.html` 만 만들고 `color-tuner.html` 없으면 즉시 추가 생성.
+
+---
+
+## Self-verification 종료 조건 (2차 호출)
+
+2차 호출에서 sub-agent가 자기 빌드를 스크린샷으로 검증할 때 **최대 2회의 self-revision**까지만 허용한다. 그 이상은 visual-refiner(STEP 5)의 영역.
+
+```
+1. deck.html 빌드 + 9장 take_screenshot
+2. self-review: 명백한 깨짐(텍스트 잘림·overflow·렌더링 오류)만 검출
+   → 발견 시 1회 수정·재빌드 (revision-1)
+3. 재차 self-review:
+   → 발견 시 1회 더 수정 (revision-2, 최종)
+4. 종료 — 더 이상 self-revision 없음. 후속 visual-refiner가 5차원 평가·시각 미세 조정 담당.
+```
+
+**self-review 범위 한정** (이 범위 밖은 visual-refiner 위임):
+- ✓ 텍스트 컨테이너 밖 잘림
+- ✓ 슬라이드 1장 내 요소 겹침
+- ✓ font-family 폴백 깨짐 (한국어 시스템 폴백)
+- ✗ Hero 강도, 시각 균형, 색상 대비 — visual-refiner
+- ✗ 5차원 디자인 품질 평가 — visual-refiner
+- ✗ 스타일 정체성 정도 — visual-refiner
+
+**위반 사례**: 2차 호출이 self-verification 루프로 8분+ 시간 소비 → visual-refiner 영역까지 침범. mandate: 최대 2회로 끊고 메인에 반환, 이후 visual-refiner가 받아 처리.
+
+---
+
 ## Progress Narration (의무 — 침묵 금지)
 
 빌드 작업이 길고 메인 스레드는 sub-agent 내부를 보지 못한다. **각 마디 진입/완료마다 한 줄씩 출력**한다. SKILL.md "Progress Reporting (사용자 가시성)" 규칙을 따른다.
