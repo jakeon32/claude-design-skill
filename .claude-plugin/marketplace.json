@@ -10,10 +10,7 @@
       "name": "claude-design",
       "description": "Claude Design methodology skill — UI prototypes, slide decks, A4 documents, and free-form graphics with PowerPoint conversion",
       "category": "design",
-      "source": {
-        "source": "directory",
-        "path": "./plugins/claude-design"
-      }
+      "source": "./plugins/claude-design"
     }
   ]
 }
