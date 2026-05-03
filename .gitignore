@@ -23,3 +23,7 @@ desktop.ini
 # Claude Code 로컬 설정
 .claude/settings.local.json
 .claude/worktrees/
+
+# 로컬 샘플·테스트 문서
+/docs/claude-design.md
+/docs/design-test.md
