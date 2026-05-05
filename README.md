@@ -65,6 +65,24 @@ HTML 슬라이드 → python-pptx → PPTX → PowerPoint COM → PNG → 비교
 - 행간·자간 한국어 기준값
 - 단어 단위 줄바꿈 (`word-break: keep-all`)
 
+### 5. 이미지 파이프라인 (Slide Deck — placeholder + 한 장씩 컨펌)
+
+자료에 이미지 묘사가 있으면 `project-planner`가 자동으로 슬롯을 추출하고, 슬라이드 1차 완료 시 placeholder로 자리만 잡는다. 디자인 검토 후 사용자 컨펌으로 **이미지 패스**가 발동되어 슬롯 단위로 채운다.
+
+```
+project-planner → image_hints 추출 (photo / illust / diagram 3분기)
+slide-deck       → photo·illust = placeholder, diagram = 인라인 SVG/CSS
+[디자인 검토 OK]
+이미지 패스      → 슬롯별 [a] AI 생성(codex CLI) [b] 직접 제공 [c] skip
+```
+
+- **슬롯 ID 컨벤션**: `slot_{NN}_{sNN}_{type}_{slug}` — placeholder 이름 = 파일 이름
+- **저장 경로**: `outputs/{프로젝트}/images/{slot_id}.png`
+- **비용 통제**: 한 장씩 컨펌 + 누적 토큰 표시 + `q`로 패스 중단·재개
+- **AI 생성**: OpenAI Codex CLI(`gpt-image-2`) — ChatGPT 로그인만으로 호출. 한글 활자 매거진급 품질 검증됨
+
+상세: [`references/image-pipeline.md`](plugins/claude-design/skills/claude-design/references/image-pipeline.md)
+
 ---
 
 ## 에이전트 구조
@@ -135,6 +153,7 @@ claude-design-skill/
             │   ├── output-common.md             모드 공통 출력 패턴
             │   ├── cover-patterns.md            커버 장식 패턴 6종
             │   ├── photo-layouts.md             사진 배치 패턴 + Unsplash IDs
+            │   ├── image-pipeline.md            이미지 슬롯·placeholder·codex 호출·매칭 규칙
             │   ├── color-rules.md               색상 분배 + photo gradient blend + z-index
             │   ├── pptx-alignment-patterns.md   python-pptx 정렬 보정값
             │   ├── qa-pipeline.md               QA 파이프라인 정의
@@ -245,12 +264,13 @@ build_pptx([my_cover], 'D:/tmp/custom.pptx', ds=ds)
 ## 슬라이드 덱 워크플로우
 
 ```
-Step 0  콘텐츠 재편성      (원본 문서 있을 때 — 선택)
-Step 1  슬라이드 구성안    그리드×구성요소 + 핵심 메시지 확정
-Step 2  HTML 슬라이드 생성 키보드 네비게이션 포함 (←→ Space F S)
-Step 3  Preview Loop       Chrome DevTools 스크린샷 → 반복 수정
-Step 4  다중 시안          병렬 생성 후 비교 선택
-Step 5  PPTX 변환          slide-pptx-agent 호출 → .pptx (선택, "PPTX로" 요청 시)
+Step 0   콘텐츠 재편성       (원본 문서 있을 때 — 선택)
+Step 1   슬라이드 구성안     그리드×구성요소 + 핵심 메시지 확정
+Step 2   HTML 슬라이드 생성  키보드 네비게이션 포함 (←→ Space F S) — placeholder 박힌 1차 완료
+Step 3   Preview Loop        Chrome DevTools 스크린샷 → 반복 수정
+Step 4   다중 시안           병렬 생성 후 비교 선택
+Step 4.5 이미지 패스 (선택)  placeholder 슬롯을 한 장씩 채움 — codex 또는 사용자 제공
+Step 5   PPTX 변환           slide-pptx-agent 호출 → .pptx (선택, "PPTX로" 요청 시)
 ```
 
 HTML 슬라이드는 `d:\tmp\slides.html`에 저장되며 브라우저에서 바로 열 수 있다.

@@ -1013,6 +1013,97 @@ photo-overlay / photo-split / full-bleed 사용 조건 + Unsplash 추천 ID + PP
 
 ---
 
+### 이미지 슬롯 처리 (Image Slot Handling)
+
+**단일 출처**: `references/image-pipeline.md`. 본 섹션은 SDA가 1차 완료까지 책임지는 부분만 요약.
+
+#### 입력
+
+BRIEF의 `image_hints` 필드. project-planner가 자료에서 추출한 슬롯 목록.
+- `image_hints` 없거나 빈 경우 → 본 섹션은 적용 안 함 (텍스트 위주 덱)
+- `image_hints` 있는 경우 → 슬롯별로 아래 규칙 적용
+
+#### 라우팅 (3분기) — image-pipeline.md §2
+
+```
+type = photo  → placeholder 마크업 (image-pipeline.md §4-1) — 이미지 패스에서 채움
+type = illust → placeholder 마크업 (image-pipeline.md §4-1) — 이미지 패스에서 채움
+type = diagram → 인라인 SVG/CSS 직접 생성 (image-pipeline.md §4-3) — 1차 완료에 포함
+```
+
+**이미지 패스에서 채울지(photo·illust) vs 인라인 생성할지(diagram) 결정은 type 한 번으로 끝**. 슬라이드 레이아웃 결정과 별개.
+
+#### 레이아웃 영향
+
+`image_hints`에 슬롯이 있는 슬라이드는 photo 레이아웃을 우선 검토:
+- type=photo·illust 1개 + 텍스트 → `photo-split` (좌사진 + 우텍스트)
+- type=photo 분위기 위주 → `photo-overlay` (전체 사진 + 텍스트 오버레이)
+- type=photo 단독 강조 → `1col-full` (full-bleed)
+- type=diagram → 일반 grid (`2col-LR`, `3col-equal` 등) 안에 인라인 SVG 배치
+- 한 슬라이드에 photo + diagram 둘 다 → `2col-LR` (좌 photo, 우 diagram) 패턴
+
+#### placeholder 마크업 (photo·illust)
+
+```html
+<div class="image-slot empty"
+     data-slot-id="{slot_id}"               <!-- BRIEF slug 그대로 -->
+     data-slot-type="{photo|illust}"
+     data-slot-hint="{hint_normalized}"
+     data-slot-ratio="{16:9|4:3|1:1}"
+     data-slot-status="placeholder">
+  <div class="image-slot__label">
+    <span class="image-slot__icon">{photo:📷, illust:🎨}</span>
+    <span class="image-slot__id">#{slot_seq}</span>
+    <span class="image-slot__hint">{hint_normalized}</span>
+  </div>
+</div>
+```
+
+**필수 data-* 속성** — 이미지 패스가 매칭하는 키 (image-pipeline.md §4-1):
+- `data-slot-id` (파일 매칭 키)
+- `data-slot-type` (라우팅)
+- `data-slot-hint` (codex 프롬프트 재료)
+- `data-slot-ratio` (codex 비율 강제)
+- `data-slot-status="placeholder"` (패스 진입 신호)
+
+CSS는 image-pipeline.md §4-4의 표준 스타일 사용. `rgba` 금지·`color-mix` 의무 (memory: feedback_color_mix_obligation).
+
+#### 인라인 마크업 (diagram)
+
+```html
+<div class="image-slot inline-diagram"
+     data-slot-id="{slot_id}"
+     data-slot-type="diagram"
+     data-slot-status="filled">
+  <!-- 실제 SVG/CSS 차트가 여기 인라인. 데이터는 자료에서 그대로 가져옴 -->
+  <svg viewBox="...">...</svg>
+  <!-- 또는 CSS chart, 표, 도식 -->
+</div>
+```
+
+`data-slot-status`는 처음부터 `filled`. 이미지 패스 진입 안 함.
+
+#### 1차 완료 시 산출물
+
+```
+outputs/{프로젝트}/
+  deck.html                       ← placeholder 박힌 상태
+  deck-color-tuner.html
+  showcase.html
+  images/                         ← 빈 폴더로 생성
+  images.manifest.json            ← 슬롯 메타 초기화 (status: placeholder)
+```
+
+`images.manifest.json` 초기 스키마는 image-pipeline.md §6 참조. SDA는 status=`placeholder` 상태로 모든 photo·illust 슬롯을 등록한다 (diagram은 status=`filled`).
+
+#### 본 에이전트 책임 범위
+
+- **포함**: photo·illust 슬롯의 placeholder 마크업, diagram 슬롯의 인라인 생성, manifest 초기화
+- **제외**: 실제 이미지 생성·교체 (이는 메인이 STEP 6.5 이미지 패스에서 처리 — codex CLI 직접 호출)
+- **금지**: SDA가 codex CLI나 외부 이미지 API를 직접 호출하지 않는다. 1차 완료까지만.
+
+---
+
 ### Anti-slop 금지 목록 (슬라이드 생성 시 필수 준수)
 
 **폰트 블랙리스트** — 아래 폰트 사용 시 즉시 교체:

@@ -84,10 +84,23 @@ STEP 5.5 (자동·필수 게이트). 사용자 컨펌 게이트 — visual-refin
 
 STEP 6. 결과물 핸드오프 (사용자에게 전달)
   → DESIGN_SYSTEM + 산출물 경로 + QA 리포트 요약 + (STEP 5.5 적용 내역 — 있으면) + 다음 단계 옵션
+  → **이미지 패스 옵션** (Slide Deck 모드 — placeholder 슬롯이 있을 때만):
+     deck.html에 `data-slot-status="placeholder"` 요소가 1개 이상이면
+     "이미지 슬롯 N개 미처리. 이미지 패스를 시작할까요? [y/n]" 1회 질문.
+     y → STEP 6.5 진입 / n → placeholder 유지하고 종료 (다음 세션 재개 가능)
+
+STEP 6.5 (선택 — placeholder 있고 사용자 y 응답 시). 이미지 패스 — 한 장씩 컨펌
+  → 단일 출처: `references/image-pipeline.md` §7 (한 장씩 컨펌 흐름)
+  → 메인이 직접 orchestrate (전용 sub-agent 없음 — codex CLI 호출 + 사용자 인터랙션)
+  → 슬롯별 [a] AI 생성(codex) / [b] 직접 제공(경로·URL) / [c] skip 선택
+  → 비용 통제: 누적 토큰 표시, `r` 재생성 최대 2회, `q` 패스 중단(재개 가능)
+  → 산출: outputs/{프로젝트}/images/{slot_id}.png + images.manifest.json 갱신
+  → 종료 후 핸드오프 갱신 (적용된 슬롯 수 + 미처리 수)
 
 STEP 7 (선택 — "PPTX로" 요청 시). slide-pptx-agent 위임 (Agent tool 호출 — subagent_type: "claude-design:slide-pptx-agent")
   → 입력: 완성된 HTML 슬라이드 경로 + DESIGN_SYSTEM
   → 산출: .pptx 파일 (편집 가능한 PowerPoint) — 변환 시점에 자동 호환 처리(gradient → solid, div/span → p 등)
+  → 이미지 패스 미처리 placeholder가 있으면 PPTX에도 placeholder 박스로 변환 (`references/image-pipeline.md` §11)
 ```
 
 **STEP 4·5 자동 호출 강화 (2026-04-29 검증 결과 반영)**:
@@ -160,6 +173,7 @@ slide-deck-agent는 **반드시 두 단계로 호출**한다. 한 번의 호출�
 | 5 | 시각 QA + 5차원 평가 + **수정 제안** | visual-refiner | `agents/visual-refiner.md` |
 | 5.5 | **사용자 컨펌 게이트** (제안 → Y/일부/스킵) | (메인) | MANDATORY GATE STEP 5.5 |
 | 6 | 핸드오프 (적용 내역 포함) | (메인) | DESIGN_SYSTEM + 산출물 경로 + QA 리포트 + 적용 diff |
+| 6.5 | **이미지 패스** (Slide Deck 모드 — placeholder 있을 때만, 사용자 y 응답 시) | (메인) | `references/image-pipeline.md` |
 
 세부 절차는 owner 에이전트.md / reference 단일 출처. SKILL.md는 흐름만 정의 (MANDATORY GATE 참조).
 Step 4·5는 메인의 자동 호출 의무 — 직접 자체 처리 금지. Step 5.5는 사용자 컨펌 의무 — 사일런트 적용 금지.

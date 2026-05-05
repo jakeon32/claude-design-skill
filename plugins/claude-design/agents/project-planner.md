@@ -102,6 +102,39 @@ description: "Claude Design — 프로젝트 분석 및 모드 분기 에이전�
 
 신호 없이 진행 시 DSM 자동 추천 정확도가 떨어지므로 가능한 한 받아낸다.
 
+### 3.5단계: 이미지 단서 추출 (Slide Deck 모드 — 자료가 있을 때 필수)
+
+자료(원본 md/텍스트)에 이미지·시각자료 묘사가 있으면 추출해 BRIEF의 `image_hints` 필드에 포함한다. 단일 출처: `references/image-pipeline.md`.
+
+```
+[추출 패턴]
+- 명시적 시각자료 섹션: "**시각자료**", "**그림**", "**사진**", "**일러스트**" 헤더
+- caption 키워드: "사진:", "일러스트:", "그림 N", "도식:"
+- 본문 비유적 묘사: "호수처럼", "복권 같은" 등 — 명시 묘사가 없을 때 보조적 사용
+- hint가 전혀 없는 슬라이드는 image_hints에 포함하지 않음 (텍스트만 슬라이드)
+
+[타입 분류 — 3분기 — image-pipeline.md §2]
+- photo:    실사 사진 (풍경·인물·동물·제품·현미경 등)
+- illust:   컨셉 그림 (비유 일러스트·도식·캐릭터 그림)
+- diagram:  데이터 차트·그래프·지도(데이터)·공식 도식·표 시각화
+
+[복합 hint 처리]
+한 슬라이드에 여러 시각요소가 있으면 슬롯을 분리:
+  "정상 적혈구 vs 낫 모양 적혈구 현미경 사진 + 아프리카 말라리아 분포 지도"
+  → slot_NN_sNN_photo_sickle_cell + slot_NN+1_sNN_diagram_malaria_map
+
+[슬롯 ID 컨벤션 — image-pipeline.md §3]
+slot_{NN}_{sNN}_{type}_{slug}
+  NN     = 패스 처리 순서 (photo+illust 통틀어 1부터, diagram은 별도 카운트)
+  sNN    = 슬라이드 번호
+  type   = photo / illust / diagram
+  slug   = 한글 hint를 영문 1~3 단어로 압축 (예: "잔잔한 호수" → "lake_cover")
+```
+
+추출 결과는 BRIEF의 `image_hints` 필드에 yaml 형식으로 포함 (출력 형식 §image_hints 참조).
+
+비용 영향: photo+illust 슬롯 수가 그대로 codex 호출 가능 횟수. 사용자에게 슬롯 수 + 예상 토큰 1줄 안내.
+
 ### 4단계: BRIEF 출력 → 메인에 반환
 
 BRIEF 출력으로 본 에이전트 작업 종료. **모드별 에이전트 직접 호출 금지** — 이후 메인이 design-system-manager 호출.
@@ -145,6 +178,18 @@ style_assets:
   logo: [경로 / 없음(placeholder)]
   colors: [#hex / 없음]
   user_references: [이미지·URL·md 텍스트 — DSM이 스타일 입력으로 활용]
+image_hints:                            # Slide Deck 모드 — 자료가 있고 시각 묘사가 있을 때
+  totals: { photo: N, illust: N, diagram: N }
+  slots:
+    - slot_seq: 1                       # photo+illust 통합 카운트 (이미지 패스 순서)
+      slide: 1                          # 슬라이드 번호
+      type: photo                       # photo / illust / diagram
+      ratio: "16:9"                     # 슬라이드 layout에 따라 추정 — DSM·SDA가 확정
+      hint_original: "원문 시각자료 묘사 그대로"
+      hint_normalized: "추출된 핵심 키워드 (간결화)"
+      slug: "lake_cover"                # 영문 1~3 단어 — slot_id에 포함됨
+    # ... 추가 슬롯
+  # diagram 슬롯은 별도 카운트로 분리해도 됨 (인라인 처리되므로 패스 미진입)
 
 → 메인이 design-system-manager 호출
 ```
