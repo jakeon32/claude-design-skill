@@ -27,3 +27,10 @@ desktop.ini
 # 로컬 샘플·테스트 문서
 /docs/claude-design.md
 /docs/design-test.md
+/docs/_extracted_slides.txt
+/docs/발표자료최신.md
+/docs/유전자풀_40분발표_슬라이드구성안.md
+/docs/학습지_답안지.md
+
+# 실행 산출물 (스킬 코드 아님 — 스크린샷·덱 결과물)
+/outputs/
