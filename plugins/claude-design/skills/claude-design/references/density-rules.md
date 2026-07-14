@@ -1,0 +1,460 @@
+---
+name: density-rules
+description: "슬라이드 정보 밀도 규범 — 밀도 등급(D1/D2/D3), 가로 글자수·세로 줄 예산 표, 오버플로 결정 트리, 그룹핑 간격 비율. 본문이 많은 슬라이드를 구성·정렬하는 유일한 정본. 레이아웃을 고르기 전에 읽는다."
+---
+
+# 밀도 규범 (Density Rules)
+
+> **이 문서가 존재하는 이유.** 2026-07-14 이전 이 스킬의 모든 레이아웃 템플릿은
+> "항목 3~4개, 설명 2~3줄"이라는 저밀도를 암묵 전제로 짜여 있었고, 모든 `.slide`에
+> `overflow:hidden`이 걸려 있었다. 즉 **내용이 많으면 경고도 에러도 없이 잘려 나갔다.**
+> 폰트를 줄일지, 열을 나눌지, 슬라이드를 쪼갤지에 대한 규칙은 한 줄도 없었다.
+> 이 문서가 그 구멍을 메운다.
+
+## 근거 등급 표기
+
+| 등급 | 의미 |
+|---|---|
+| **[A] 실증** | 통제 실험·메타분석 근거. 효과크기(d) 존재 |
+| **[B] 규범** | 업계 표준·전문가 합의. 논리적 근거는 있으나 직접 실험은 부분적 |
+| **[C] 통념** | 널리 인용되나 **출처를 파보면 근거 없음**. 근거로 인용 금지 |
+
+---
+
+## 0. 대전제 — 넘침은 빌드 실패다
+
+> **자동으로 폰트를 줄여 "해결"하지 않는다. 감지 → 실패 → 구조로 해결한다.**
+
+`overflow:hidden`은 최후의 방어선일 뿐 정책이 아니다. 텍스트박스마다 다른 배율로 줄어드는
+PowerPoint autofit이 실무에서 기피되는 이유가 정확히 이것이다 — 타이포 위계가 무너지고,
+과밀이라는 근본 원인이 숨는다. [B]
+
+## 0-1. 밀도 문제의 뿌리는 배치가 아니라 콘텐츠다
+
+Mayer의 효과크기 순위가 처방의 순서를 정한다. [A]
+
+| 원리 | d | 슬라이드 규칙 |
+|---|---|---|
+| 응집성 Coherence | **0.86** | 결론 증명에 불필요한 것 **삭제** |
+| 중복 Redundancy | **0.87** | 나레이션과 같은 문장을 화면에 다 쓰지 않는다 |
+| 공간 근접 Contiguity | **0.79** | 라벨을 대상 **옆에** 붙인다 (범례 분리 금지) |
+| 분절화 Segmenting | **0.70** | 슬라이드를 **쪼갠다** |
+| 신호화 Signaling | **0.46** | Action Title·강조로 구조를 명시 |
+
+**"빼기"(0.86)와 "쪼개기"(0.70)가 "잘 배치하기"보다 먼저다.**
+공간 분배를 1순위로 두면, 애초에 두 장이어야 할 슬라이드를 배치 기술로 한 장에 밀어넣게 된다.
+
+**밀도 자체는 죄가 아니다.** 맥킨지 덱이 고밀도인데도 읽히는 이유는 배치가 좋아서가 아니라
+① 모든 요소가 하나의 결론에 종속되고(coherence) ② 구조가 시각적으로 신호되고(signaling)
+③ 라벨이 대상 옆에 붙기 때문이다(contiguity). 처방은 "내용을 줄여라"가 아니라 **"구조를 잡아라"**다.
+
+---
+
+## 1. 기하 규격 (1280×720 고정)
+
+```
+캔버스        1280 × 720
+외곽 마진      좌우 64px / 상단 40px / 하단 40px
+안전 영역      1152 × 640
+
+밴드 (세로)
+  Title  : y  40 → 140   (h 100px = 2줄 × 40px + 여유)
+  Rule   : y 148         (1px 구분선, 선택)
+  Body   : y 164 → 656   (h 492px)   ← 줄 예산의 분모
+  Source : y 672 → 700   (h 28px, 하단 정렬)
+
+그리드 (가로)
+  12열, gutter 24px → 열 폭 74px
+  2단 = 6/6 (564px)  |  비대칭 = 5/7 (438 / 690)  |  3단 = 4/4/4 (368px)
+```
+
+---
+
+## 2. ★ 가로 축 — 열당 한글 글자 수
+
+**한글은 라틴 대비 자폭이 약 2배다** (라틴 평균 ≈ 0.5em, 한글 ≈ 1.0em).
+따라서 널리 인용되는 가독 줄길이 **"45~75자"(Bringhurst)는 라틴 기준이며, 한글에 그대로 쓰면 안 된다.** [B]
+정보량 등가로 환산하면 **한글 최적은 20~40자/줄.**
+
+| 구성 | 열 폭 | 본문 24px | 본문 28px | 본문 32px |
+|---|---|---|---|---|
+| **1단** | 1152px | 48자 | 41자 | 36자 |
+| **2단** | 564px | 23자 | 20자 | 17자 |
+| **3단** | 368px | 15자 | 13자 | 11자 |
+
+### 규칙
+- **41자 초과 → 2단으로 전환.** 즉 **한글 슬라이드는 2단이 기본형**이다.
+  1단 1152px 본문은 대부분 너무 길다.
+- **열당 13자 미만이 되면 열 늘리기 금지** (줄바꿈 파편화). → 3단이 절대 상한.
+- 양쪽 정렬(`justify`) 금지 — 한글에서 어절 간격이 튄다. 좌측 정렬 고정.
+
+---
+
+## 3. ★ 세로 축 — 줄 예산
+
+**Body 492px 기준, `line-height: 1.45`**
+
+| 본문 | 줄 높이 | **줄 예산** | 참고 (항목 6개면 항목당) |
+|---|---|---|---|
+| 32px (D1) | 46px | **10줄** | 1.6줄 → 실질 5개 × 2줄 |
+| 28px (D2) | 41px | **12줄** | 2줄 |
+| 24px (D2 하한) | 35px | **14줄** | 2.3줄 |
+| 20px (D3) | 29px | **16줄** | 2.6줄 |
+| 18px (D3) | 26px | **18줄** | 3줄 |
+
+### 판정 공식 — 렌더 **전에** 계산한다
+
+```
+사용 높이 = Σ(항목 줄수 × 줄높이) + (항목수 − 1) × 그룹간격
+if 사용 높이 > 492  →  넘침 확정. §5 결정 트리 진입 (HTML 생성 금지)
+```
+
+> **오버플로의 90%는 여기서 죽는다.** 다 그린 다음 `overflow:hidden`으로 삼키지 말고,
+> 그리기 전에 계산해서 넘칠 게 확정이면 HTML을 만들지도 말 것.
+
+---
+
+## 4. 밀도 등급 (Density Tier)
+
+"한계"를 단일 숫자로 정하지 않는다. **소비 맥락**이 등급을 정한다.
+슬라이드마다 `data-density`를 선언하고, 검증기가 등급별 하한을 강제한다.
+
+> **px 환산 기준**: 표준 16:9 슬라이드 = 13.333in = **960pt** 폭. 우리 캔버스는 1280px.
+> **∴ 1pt = 1.333px** (24pt → 32px, 18pt → 24px, 12pt → 16px)
+
+| 등급 | 용도 | 제목 | 본문 | **본문 절대 하한** | 각주 | 항목 수 | 항목당 줄 |
+|---|---|---|---|---|---|---|---|
+| **D1** 투사(발표장) | 프로젝터, 뒷줄 존재 | 44–56px | 32–40px | **32px** (=24pt) | 20px | ≤5 | ≤2 |
+| **D2** 화면공유/영상 | 줌·유튜브·노트북 | 36–44px | 26–32px | **24px** (=18pt) | 16–18px | ≤6 | ≤3 |
+| **D3** 배포(leave-behind) | 혼자 읽는 PDF·리포트 | 30–36px | 18–22px | **16px** (=12pt) | 11–13px | ≤9 | ≤4 |
+
+**근거**
+- D1 32px: 투사 최소 24pt는 업계 합의 [B]. 시력 20/40 기준 도로표지 규격에서 역산 가능.
+  Paradi 설문에서 **"글자가 작아 못 읽음" 50.6%** — 발표 3대 불만 상시 상위 [B].
+- D2 24px: 화면공유 맥락 최소선 18pt [B]. 검증법 — **노트북에서 50% 축소 표시**해 읽히는지 확인
+  (공유창 + 비디오 그리드에 눌린 실제 크기의 근사).
+- D3 16px: 배포용은 팔 길이 열람 → 인쇄 본문(10–12pt) 기준 [B].
+
+### 🔴 등급은 소비 맥락이 정한다. 콘텐츠 양이 정하지 않는다.
+**D1/D2 슬라이드에서 내용이 넘치면 D3로 강등하지 말고 쪼개라.**
+강등(§5 STEP 4)은 애초에 "혼자 읽는 문서"였던 슬라이드에만 허용한다.
+
+---
+
+## 5. ★ 오버플로 결정 트리 (우선순위 고정)
+
+```
+넘침 감지 (§3 사전 계산 또는 scrollHeight > clientHeight)
+│
+├─ STEP 1. [내용 삭제]  ★ 항상 첫 번째
+│   질문: "이 요소를 지우면 이 슬라이드의 Action Title이 증명되지 않는가?"
+│   → 증명에 불필요하면 삭제. 예외 없음.
+│   근거: Mayer 응집성 d = 0.86 [A] — 이 트리에서 가장 강한 근거
+│   구체 대상:
+│     · 제목을 되풀이하는 도입 문장
+│     · "배경 / 개요" 문단, 방법론 서술
+│     · 표에서 결론과 무관한 열
+│     · 장식적 아이콘·배경 이미지·그림자
+│   → 20~30% 감축이 안 되면 애초에 슬라이드가 2개다. STEP 2로.
+│
+├─ STEP 2. [슬라이드 분할]  ★ 삭제로 안 되면 무조건 여기
+│   판정 (하나라도 해당 → 분할):
+│     · 제목을 한 문장으로 못 쓴다 / "그리고"·"또한"으로 두 주장이 붙는다
+│     · 서로 다른 결론을 지지하는 차트·표가 2개 이상
+│     · 근거(supporting argument)가 5개 이상
+│   방식: 피라미드의 근거 축을 따라 자른다.
+│         결론 슬라이드 1장(근거 3개 요약) + 근거별 상세 1장씩
+│   근거: Mayer 분절화 d = 0.70 [A] / "One slide = one decision-driving idea" [B]
+│   ⚠️ 슬라이드 수 증가는 비용이 아니라 정상이다.
+│      (10/20/30 룰은 [C]. 장수 제한을 이유로 분할을 포기하지 말 것)
+│
+├─ STEP 3. [부록 이관]
+│   대상: 근거의 근거 — 원본 표, 산출식, 방법론, 로우데이터, 예외 케이스
+│   본문엔 결론 수치 + "상세: 부록 A-3" 참조만.
+│   판정: "발표 중 누가 물어봐야만 필요한 정보"인가? → 예면 부록.
+│
+├─ STEP 4. [레이아웃 격상]   ← 열 늘리기 / 밀도 등급 강등
+│   순서: 1단 → 2단 → 2단+사이드바 → 3단 (3단이 절대 상한)
+│   제약: 열당 한글 13자 미만이 되면 금지 (§2)
+│   제약: 열을 늘리면 §6 그룹 경계를 재설계해야 한다
+│          — 열 경계가 그룹 경계와 어긋나면 오히려 나빠진다
+│
+├─ STEP 5. [폰트 축소]  ★ 마지막. 그리고 1단계만.
+│   · 등급 하한(§4)까지만. 하한 미만 = 즉시 실패
+│   · **슬라이드 전체 균일 스케일**만 (--k 토큰 1단계, ≈ −10%)
+│     개별 텍스트박스 개별 축소 금지 (= PowerPoint autofit 실패 모드)
+│   · line-height 하한 1.35. 자간 축소 금지
+│   · 여백은 §6 비율을 유지한 채 비례 축소만
+│   ⚠️ "일단 폰트 2px 줄여서 맞춘다"는 STEP 1~4 회피다.
+│
+└─ STEP 6. [실패] — 빌드 에러
+    예: "slide 7: body overflow 84px @D3 floor(16px).
+         Split required. items=11, line_budget=24, needed=31"
+```
+
+### 절대 금지
+
+| 금지 | 이유 |
+|---|---|
+| `overflow:hidden`으로 넘침을 삼키기 | 무증상 정보 손실 |
+| 텍스트박스 개별 autofit / 무제한 축소 | 타이포 위계 붕괴 + 근본 원인 은폐 [B] |
+| 등급 하한 미만 축소 | 읽히지 않는 슬라이드 = 없는 슬라이드 |
+| 4단 이상 열 분할 | 열당 13자 미만 → 줄바꿈 파편화 |
+| 본문 스크롤 컨테이너 | 슬라이드는 고정 프레임 |
+
+---
+
+## 6. ★ 그룹핑 — 간격 비율로 강제한다
+
+**근접성(Gestalt proximity)**: 가까운 것끼리 한 그룹으로 지각된다.
+Mayer 공간근접 d = 0.79와 정합 [A/B].
+
+### 규칙: **그룹 내 간격 : 그룹 간 간격 ≥ 1 : 2**
+
+```
+항목 내 줄 간격    8px
+항목 간 간격      24px   (1:3)
+블록 간 간격      48px   (1:6)
+```
+
+### 🔴 여백은 개체 크기의 종속 변수다 — 여백만 따로 깎지 마라
+
+> **적정 여백은 그 여백을 가진 개체의 크기에 비례한다.**
+> 그러므로 공간이 부족할 때 **여백을 깎아서 맞추면 안 된다. 개체를 줄여야 여백이 따라 줄어든다.**
+
+**이 원리는 이미 타이포그래피가 증명하고 있다.** 아무도 행간을 "12px"이라고 하지 않고
+**"140%"라고 말한다** — 행간이 글자 크기의 *함수*라는 걸 조판이 처음부터 알고 있었다는 뜻이다.
+같은 원리가 여백 전체에 적용된다.
+
+**그리고 이건 텍스트만의 규칙이 아니다.** 카드·박스·아이콘·도해 노드 등
+**모든 오브젝트에 동일하게 적용된다.**
+
+| 개체 | 여백은 무엇에 비례하는가 |
+|---|---|
+| 텍스트 줄 | 글자 크기 (`line-height`, `em`) |
+| 카드·박스 | 카드 크기 (padding, gap) |
+| 아이콘·칩 | 아이콘 크기 |
+| 도해 노드 | 노드 크기 (노드 간격 ≥ 노드 폭의 0.25배) |
+| 모서리 반경 | 개체 크기 (칩 8px / 카드 12px / 컨테이너 16~20px) |
+
+**AI의 기본 실패 모드**: 공간이 부족하면 **여백부터 깎는다**(가장 만만하므로).
+그러면 개체는 그대로인데 숨 쉴 틈이 사라져 서로 달라붙고, **그룹 경계가 제일 먼저 죽는다.**
+그룹핑이 무너지면 §0-1의 공간근접(d=0.79) 이득이 통째로 날아간다.
+
+**해법: 여백을 독립 조절하는 경로를 CSS에서 없앤다 — 상대 단위(`em`)로 묶는다.**
+
+```
+잘못된 축소:  폰트 28px 유지 + 여백 24px → 12px      (그룹 경계 소멸)
+올바른 축소:  폰트를 줄이면 em 기반 여백이 자동으로 따라 줄어든다 (비율 보존)
+```
+
+### ⚠️ 비례는 선형이 아니다 — 여백은 "크기"가 아니라 "시각 질량"의 함수다
+
+**폰트 크기는 1차원 수치지만, 눈이 느끼는 것은 면적이다.**
+크기가 2배가 되면 시각 질량은 **4배**(제곱)로 늘어난다.
+그래서 **큰 글씨는 배수를 덜 줘도 이미 충분히 무겁고**, 배수를 그대로 유지하면
+오히려 줄끼리 남남이 되어 문단으로 읽히지 않는다.
+**단순 선형 수치로 접근하면 반드시 틀리는 지점이 여기다.**
+
+**시각 질량에 기여하는 3축**
+
+| 축 | 기여 방식 |
+|---|---|
+| **크기** | 면적 = 크기² — **제곱으로 기여** |
+| **굵기(weight)** | 획 면적 증가. Bold는 Regular보다 무겁다 |
+| **대비(contrast)** | 배경 대비가 클수록 무겁다 |
+
+**결과: 행간 배수는 크기에 대해 하향 곡선을 그리되, 작은 쪽에서 포화한다.**
+
+| 크기 | `line-height` | Δ |
+|---|---|---|
+| 48px (제목) | **1.22** | |
+| 36px | 1.30 | +0.08 |
+| 32px | 1.42 | +0.12 |
+| 28px (본문) | **1.50** | +0.08 |
+| 20px | 1.55 | +0.05 |
+| 16px (각주) | **1.58** | +0.03 |
+
+작아질수록 배수가 오르지만 **증가폭이 점점 준다.** 무한정 오르지 않고 **1.6 근처에서 포화**한다
+(더 벌리면 줄이 서로 남남이 되어 문단으로 안 읽힌다). 위로는 **1.15가 바닥**(글자끼리 붙기 시작).
+
+→ **연속 함수로 계산하지 말고 구간 테이블 + `clamp`로 박는다.**
+로그 곡선으로 근사하면 양 끝에서 어긋난다(특히 작은 쪽에서 과대 추정).
+
+→ **단일 배수를 전역으로 쓰면 안 된다.** 흔히 말하는 "행간 130~140%"는
+제목~큰 본문 구간의 값이고, 24~28px 한글 본문에는 **145~160%**가 맞다
+(한글은 라틴보다 글자 밀도가 높아 행간을 더 벌려야 한다).
+
+### 굵기·대비 축 보정 (크기 축은 `em`이 자동 처리하지만 이 둘은 아니다)
+
+```css
+.body strong,
+.body .is-bold  { line-height: calc(var(--lh-body) + 0.05); }  /* 획이 두꺼워 더 빨리 붙어 보임 */
+.body .is-muted { line-height: calc(var(--lh-body) - 0.03); }  /* 질량이 낮아 덜 뭉침 */
+```
+
+### 정렬
+- **베이스라인 그리드 4px** — 모든 여백·행간은 4의 배수
+- 다단에서 각 열의 첫 줄 베이스라인 일치: `align-items: start` + 동일 `padding-top`
+- **광학 정렬**: 불릿 마커는 `margin-left: -1.1em`으로 텍스트 좌측선 밖으로 내보내
+  본문 좌측선을 통일한다(hanging punctuation)
+- **강조는 슬라이드당 1~2개소.** 3개 이상이면 강조가 아니다 [A, signaling d=0.46]
+
+---
+
+## 7. CSS 구현 — 하한을 코드로 강제, 여백은 상대 단위로 묶는다
+
+> **규격은 문서가 아니라 코드에 둔다.** 문서에만 적힌 규격은 조용히 이탈한다.
+> 두 가지를 CSS가 보장한다:
+> ① `clamp()`의 min 인자 = **폰트 하한** (이 밑으로 못 내려간다)
+> ② 여백을 **`em`(개체 상대)** 으로 묶어 **여백만 따로 깎는 경로를 문법적으로 제거**한다
+
+```css
+.slide {
+  container-type: size;
+  --k: 1;                        /* 밀도 계수: 1.0 → 0.9 까지만 (1단계) */
+
+  /* ① 폰트 — min 인자가 밀도 등급 하한. 여기가 하드 게이트다 */
+  --fs-title: clamp(36px, calc(42px * var(--k)), 48px);
+  --fs-body:  clamp(24px, calc(28px * var(--k)), 32px);   /* D2 기본 */
+  --fs-note:  clamp(14px, calc(17px * var(--k)), 20px);
+
+  /* ② 행간 — 구간별 배수 (§6: 비례는 선형이 아니다) */
+  --lh-title: 1.22;
+  --lh-body:  1.5;
+  --lh-note:  1.55;
+}
+.slide[data-density="D1"] { --fs-body: clamp(32px, calc(36px * var(--k)), 40px); }
+.slide[data-density="D3"] { --fs-body: clamp(16px, calc(20px * var(--k)), 22px); }
+
+/* ★ 여백은 em — 개체가 줄면 여백이 자동으로 따라 줄어든다.
+   px로 쓰면 "폰트는 그대로 두고 여백만 깎기"가 가능해진다. 그 경로를 없앤다. */
+.slide .body {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  --gap-line:  0.30em;   /* 항목 내 줄 간격 */
+  --gap-item:  0.85em;   /* 항목 간        (1 : 2.8) */
+  --gap-block: 1.70em;   /* 블록 간        (1 : 5.7) */
+}
+.slide .body .item     { margin-bottom: var(--gap-item); }
+.slide .body .item > p  + p { margin-top: var(--gap-line); }
+.slide .body .block    { margin-bottom: var(--gap-block); }
+
+/* ★ 비텍스트 오브젝트도 같은 원리 — 패딩·간격을 개체 크기에 비례시킨다 */
+.card {
+  --card-fs: var(--fs-body);
+  font-size: var(--card-fs);
+  padding: 1.0em 1.1em;        /* 카드가 작아지면 패딩도 작아진다 */
+  border-radius: 0.45em;       /* 반경도 개체 크기에 비례 */
+  gap: 0.5em;
+}
+.card-grid { gap: 0.85em; }    /* 카드 간 간격도 카드 폰트에 종속 */
+```
+
+**핵심**: `--k`를 내리거나 `--fs-body`를 낮추면 **폰트·행간·모든 여백·카드 패딩·모서리 반경이
+한꺼번에 같은 비율로** 줄어든다. 그룹 비율(1 : 2.8 : 5.7)이 자동 보존되므로
+**축소해도 그룹 경계가 죽지 않는다.**
+
+### `vw` 금지, `transform: scale()` 사용
+캔버스는 1280 고정이지 뷰포트가 아니다. 썸네일·풀스크린 대응은 **폰트를 재계산하지 말고
+캔버스 전체를 스케일**한다 — 레이아웃이 불변이므로 넘침 상태가 배율에 따라 달라지지 않는다
+(= 검증 결과를 신뢰할 수 있다).
+
+```css
+.stage { width: 100vw; height: 100vh; display: grid; place-items: center; }
+.slide { transform: scale(var(--fit)); transform-origin: center; }
+/* --fit = min(vw/1280, vh/720) */
+```
+
+### 자동 축소(fit-to-box)는 기본 금지. 조건부만 허용.
+전부 만족할 때만:
+- (a) **슬라이드 단위 균일 스케일**만. 개별 박스 개별 축소 금지
+- (b) **하한 clamp 존재** — 하한에 닿아도 안 맞으면 **실패**(계속 줄이지 않음)
+- (c) 축소 폭 **최대 1단계(≈ −10%)**. 그 이상 필요하면 구조 문제다 → STEP 1~4
+
+---
+
+## 8. Action Title — 제목에 결론을 쓴다
+
+**이건 관행이 아니라 실증이다. [A]**
+Garner & Alley (Penn State): 공대생 110명에게 **같은 발표 대본**을 들려주고 슬라이드만 달리한
+통제 실험 → 문장형 헤드라인 + 시각 근거 집단이 (1) 이해도 우수 (2) 오개념 적음
+(3) 지연 사후검사 회상 우수 (4) 인지부하 자가보고 낮음.
+
+| 항목 | 규칙 |
+|---|---|
+| 형식 | 주제(topic)가 아니라 **결론(assertion)**. 완전한 문장 |
+| 예시 | ❌ "매출 현황" → ✅ "매출은 3분기에 반등해 전년比 +12% 회복" |
+| 길이 | **한글 40자 이하, 최대 2줄. 2줄 초과는 하드 실패** [B] |
+| 문법 | 능동태. 수치 포함 ("개선됨" ✕ → "20% 개선" ○) |
+| 검증 | **So-what 테스트** — 슬라이드의 아무 요소나 짚고 "그래서?"를 물어 제목에 연결되지 않으면 그 요소를 삭제(STEP 1) |
+| 덱 검증 | **Narrative spine** — 제목만 순서대로 읽었을 때 하나의 논설문이 되어야 한다 |
+
+**피라미드 원칙(Minto)** [B]: 본문 구조를 `assertion(제목) → supports[] (2~4개) → evidence(각 support 아래 1개)`
+트리로 강제. **supports 5개 이상 = 분할 신호**(§5 STEP 2).
+
+---
+
+## 9. 생성 파이프라인 (실행 순서)
+
+```
+1. Ghost   : Action Title + supports[] JSON 생성   ← So-what·2줄 검증
+2. Budget  : 밀도 등급 선언 → §2·§3 계산 → 초과분은 STEP 1~3 적용 (분할 확정)
+3. Render  : HTML/CSS 생성 (clamp 하한 내장, 4px 그리드)
+4. Lint    : 검증기 → 넘침 / 안전영역 / 폰트 하한 → 실패 시 트리 재적용
+5. Ship    : 전 슬라이드 통과 시에만 출력
+```
+
+Ghost 단계 JSON:
+```json
+[
+  {"n":1, "title":"매출은 3분기에 반등해 전년比 +12% 회복",
+   "supports":["신규 채널 기여 +8%p","기존 채널 이탈 둔화"],
+   "evidence":"chart", "density":"D2"}
+]
+```
+
+---
+
+## 10. 🔴 근거로 인용하지 말 것 — 전부 [C]
+
+| 통념 | 실제 |
+|---|---|
+| **6×6 규칙** (불릿 6 × 6단어) | 실증 0. PowerPoint 보급 후 자연발생한 관행 |
+| **7×7 규칙** | 옹호 측조차 "공식 출처나 창시자가 없다"고 인정 |
+| **1-6-6 규칙** | 블로거 발 관행 |
+| **10/20/30 (Kawasaki)** | 2005년 본인 블로그. VC 피치 한정 경험칙. "30pt" 근거는 가독성 실험이 아니라 "내용을 외웠다면 글자가 적어질 것"이라는 휴리스틱 |
+| **Miller 7±2로 항목 수 정당화** | **오용.** Miller의 7은 청킹·리허설 포함 *수행* 수치. Cowan(2001) 메타분석 → 순수 작업기억 용량은 **약 4청크**. 슬라이드 항목 상한 근거로 7을 쓰면 안 된다 |
+
+**대신 §0-1의 Mayer 효과크기와 §4의 등급별 하한을 근거로 쓴다.**
+
+---
+
+## 11. 체크리스트
+
+- [ ] 제목이 결론 문장인가? 40자·2줄 이내인가?
+- [ ] supports가 5개 미만인가? (5개 이상 → 분할)
+- [ ] 열당 한글 글자수가 20~40자인가? (41자 초과 → 2단)
+- [ ] 줄 예산 계산을 렌더 **전에** 했는가?
+- [ ] 그룹 내 : 그룹 간 간격이 1:2 이상인가?
+- [ ] 폰트가 등급 하한 이상인가? (D1 32 / D2 24 / D3 16)
+- [ ] 강조가 1~2개소인가?
+- [ ] 넘침을 `overflow:hidden`으로 숨기지 않았는가?
+
+---
+
+## 출처
+
+- [Garner & Alley — How the Design of Presentation Slides Affects Audience Comprehension (PSU, PDF)](https://writing.engr.psu.edu/ae_comprehension.pdf)
+- [ASEE — Assertion-Evidence Slides Lead to Better Comprehension and Recall (PDF)](https://peer.asee.org/assertion-evidence-slides-appear-to-lead-to-better-comprehension-and-recall-of-more-complex-concepts.pdf)
+- [Cambridge Handbook of Multimedia Learning, Ch.12 (Mayer)](https://www.cambridge.org/core/books/abs/cambridge-handbook-of-multimedia-learning/principles-for-reducing-extraneous-processing-in-multimedia-learning-coherence-signaling-redundancy-spatial-contiguity-and-temporal-contiguity-principles/CD5B7AE1279A9AB81F8EEBB53DBEC86E)
+- [Digital Learning Institute — Mayer's 12 Principles (효과크기)](https://www.digitallearninginstitute.com/blog/mayers-principles-multimedia-learning)
+- [NSW CESE — Cognitive Load Theory (Sweller, PDF)](https://education.nsw.gov.au/content/dam/main-education/about-us/educational-data/cese/2017-cognitive-load-theory.pdf)
+- [Miller's Magical Number in Retrospect (PMC)](https://pmc.ncbi.nlm.nih.gov/articles/PMC4486516/) / [Cowan — The magical number 4](https://www.cambridge.org/core/services/aop-cambridge-core/content/view/44023F1147D4A1D44BDC0AD226838496/S0140525X01003922a.pdf/the-magical-number-4-in-short-term-memory-a-reconsideration-of-mental-storage-capacity.pdf)
+- [Slideworks — How to Write Action Titles Like McKinsey](https://slideworks.io/resources/how-to-write-action-titles-like-mckinsey)
+- [think-cell — Pyramid Principle](https://www.think-cell.com/en/resources/content-hub/using-the-pyramid-principle-to-build-better-powerpoint-presentations)
+- [Think Outside The Slide — Font Size / Annoying PowerPoint Survey](https://www.thinkoutsidetheslide.com/free-resources/latest-annoying-powerpoint-survey-results/)
+- [UXPin — Optimal Line Length](https://www.uxpin.com/studio/blog/optimal-line-length-for-readability/)
+- [ppt-design.com — Text Fitting / Autofit 문제](https://ppt-design.com/blog/text-fitting-in-powerpoint-how-to-make-text-fit-perfectly)
+- [Modern CSS — Container Query Units and Fluid Typography](https://moderncss.dev/container-query-units-and-fluid-typography/)
+- [SlideModel — 6x6 Rule](https://slidemodel.com/6x6-rule-powerpoint/) / [Guy Kawasaki — 10/20/30](https://guykawasaki.com/the_102030_rule/)

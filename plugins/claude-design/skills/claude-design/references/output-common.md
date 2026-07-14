@@ -93,14 +93,18 @@ DESIGN_SYSTEM 없이 생성 시작 불가. 없으면 DesignSystemManager 먼저 
 - "한국 시장·KR·국내·한국어" 언급
 - Jake의 모든 작업 (기본 적용)
 
-적용 내용 요약:
+적용 내용 요약 (2026-07-14 갱신 — 옛 웹 기준 값 폐기):
 ```
 font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif
-line-height (body): 1.65~1.8 (영어 대비 1.1~1.3배)
+line-height (슬라이드 body): 1.45~1.6   ← 옛 1.65~1.8은 웹 기준. 줄 예산 낭비라 폐기
 letter-spacing (heading): -0.02~-0.04em
-한 줄 글자 수: 제목 10~18자, 본문 18~24자
+한 줄 글자 수: 제목 10~18자, 본문 20~40자 (41자 초과 → 2단)
 word-break: keep-all (줄바꿈 제어)
 ```
+
+⚠️ **크기(px)는 여기 적지 않는다.** 밀도 등급에 따라 달라지므로 정본은
+`references/density-rules.md` (D1 32px / D2 24px / D3 16px 하한).
+값을 여러 문서에 복사하면 규격이 조용히 이탈한다.
 
 ---
 

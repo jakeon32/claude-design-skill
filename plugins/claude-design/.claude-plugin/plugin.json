@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "claude-design",
-  "version": "1.0.0",
-  "description": "Claude Design methodology — UI prototypes, slide decks, A4 documents, and free-form graphics with PowerPoint conversion. Provides 13 specialized sub-agents (project-planner, design-system-manager, slide-deck, slide-qa, slide-pptx, prototype, document, other, visual-refiner + optional copywriting/animation/responsive/accessibility).",
+  "version": "1.1.0",
+  "description": "Claude Design methodology — UI prototypes, slide decks, A4 documents, and free-form graphics with PowerPoint conversion. Provides 13 specialized sub-agents (project-planner, design-system-manager, slide-deck, slide-qa, slide-pptx, prototype, document, other, visual-refiner + optional copywriting/animation/responsive/accessibility). v1.1: density rules (overflow decision tree, D1/D2/D3 tiers), table & diagram layouts, chart value-to-pixel scaling, slide-lint build gate.",
   "author": {
     "name": "Jake"
   },
@@ -12,7 +12,12 @@
     "prototype",
     "pptx",
     "korean-typography",
-    "tech-editorial"
+    "tech-editorial",
+    "density-rules",
+    "table-layouts",
+    "diagram-layouts",
+    "chart-scaling",
+    "slide-lint"
   ],
   "license": "MIT"
 }

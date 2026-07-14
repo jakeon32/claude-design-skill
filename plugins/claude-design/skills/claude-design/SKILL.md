@@ -168,7 +168,9 @@ slide-deck-agent는 **반드시 두 단계로 호출**한다. 한 번의 호출�
 |---|------|-------|----------|
 | 1 | 모드 선택 + 콘텐츠 수집 + 신호 추출 | project-planner | `agents/project-planner.md` |
 | 2 | DESIGN_SYSTEM 확정 + 컨셉 추천 | design-system-manager | `agents/design-system-manager.md` |
+| **2.5** | **🔴 밀도 등급 선언 + 줄 예산 계산 (Slide Deck 모드)** | (메인) | **`references/density-rules.md`** |
 | 3 | 생성 (모드별 빌드) | 모드별 generator | `agents/[mode]-agent.md` |
+| **3.5** | **🔴 slide-lint (기계 게이트 — 실패 시 exit 1)** | (메인) | **`tools/slide_lint.js`** |
 | 4 | 코드 QA (Slide Deck 모드만) | slide-qa-agent | `agents/slide-qa-agent.md` |
 | 5 | 시각 QA + 5차원 평가 + **수정 제안** | visual-refiner | `agents/visual-refiner.md` |
 | 5.5 | **사용자 컨펌 게이트** (제안 → Y/일부/스킵) | (메인) | MANDATORY GATE STEP 5.5 |
@@ -177,6 +179,18 @@ slide-deck-agent는 **반드시 두 단계로 호출**한다. 한 번의 호출�
 
 세부 절차는 owner 에이전트.md / reference 단일 출처. SKILL.md는 흐름만 정의 (MANDATORY GATE 참조).
 Step 4·5는 메인의 자동 호출 의무 — 직접 자체 처리 금지. Step 5.5는 사용자 컨펌 의무 — 사일런트 적용 금지.
+
+### 🔴 Step 2.5 · 3.5 — 넘침은 빌드 실패다 (2026-07-14 신설)
+
+그 전까지 모든 `.slide` 에 `overflow:hidden` 이 걸려 있었고, 내용이 넘치면
+**에러도 경고도 없이 잘려 나갔다.** 사람이 스크린샷을 눈으로 보기 전엔 아무도 몰랐다.
+
+- **Step 2.5 (생성 전)**: 밀도 등급(D1/D2/D3) 선언 → 열당 글자수·줄 예산 계산 →
+  넘칠 게 확정이면 **HTML 을 만들지 말고 먼저 쪼갠다.** 오버플로의 90%가 여기서 죽는다.
+- **Step 3.5 (생성 후)**: `node tools/slide_lint.js <deck.html>` — 넘침 / 안전영역 이탈 /
+  **폰트 하한**(D1 32 · D2 24 · D3 16px) / 제목 3줄 / 차트 정크. **실패하면 스크린샷 찍지 말고 멈춘다.**
+- **자동으로 폰트를 줄여 해결하지 않는다.** 대응 순서:
+  **삭제 → 분할 → 부록 → 열/등급 → 폰트(1단계) → 실패**
 
 ## Progress Reporting (사용자 가시성 — 필수)
 

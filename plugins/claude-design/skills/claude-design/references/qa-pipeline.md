@@ -17,8 +17,19 @@ description: "Claude Design QA 파이프라인 — 슬라이드 생성 후 자�
 ## QA 루프 전체 흐름
 
 ```
+[0. 예산 검증]  ★ 2026-07-14 신설 — HTML 생성 *전*
+  density-rules.md §2·§3 으로 줄 예산 / 글자수 계산
+  → 넘칠 게 확정이면 HTML 을 만들지 말고 먼저 쪼갠다
+  → "오버플로의 90%는 여기서 죽는다"
+        ↓
 [1. 생성]
   slide-deck-agent → HTML 슬라이드 파일 (d:\tmp\slides.html)
+        ↓
+[1.5 slide-lint]  ★ 2026-07-14 신설 — 기계 게이트. 실패 시 exit 1
+  node tools/slide_lint.js <deck.html>
+  ① 넘침(scrollHeight)  ② 안전영역 이탈(getBoundingClientRect)
+  ③ 폰트 하한(D1 32 / D2 24 / D3 16)  ④ 제목 2줄 초과  ⑤ 차트 정크
+  → 실패하면 스크린샷 찍지 말고 여기서 멈춘다 (사람 눈보다 기계가 먼저)
         ↓
 [2. 스크린샷]
   Chrome DevTools → 각 슬라이드 스크린샷
@@ -41,6 +52,40 @@ description: "Claude Design QA 파이프라인 — 슬라이드 생성 후 자�
   레이아웃 유형 + 스타일 + 스크린샷 경로 + 검증 날짜 기록
   → verified-layouts.md 업데이트
 ```
+
+---
+
+## 🔴 0·1.5 단계 — 넘침은 빌드 실패다
+
+**2026-07-14 이전, 모든 `.slide` 에 `overflow:hidden` 이 걸려 있었다.**
+내용이 넘치면 **에러도 경고도 없이 그냥 잘려 나갔다.** 무증상 정보 손실이었고,
+사람이 스크린샷을 눈으로 보기 전엔 아무도 몰랐다.
+
+**규격은 문서가 아니라 코드에 둔다.**
+
+```bash
+# 빌드 게이트 — 넘치면 exit 1
+node plugins/claude-design/skills/claude-design/tools/slide_lint.js d:/tmp/slides.html
+```
+
+**린터가 잡는 것**
+
+| 검사 | 방법 | 왜 |
+|---|---|---|
+| 세로·가로 넘침 | `scrollHeight > clientHeight` | 잘림 = 정보 손실 |
+| 안전영역 이탈 | `getBoundingClientRect()` | **absolute·음수마진·transform 은 scrollHeight 로 안 잡힌다** — 반드시 병행 |
+| 폰트 하한 | `getComputedStyle` vs 밀도 등급 | **폰트를 줄여 넘침을 "해결"한 흔적 적발** |
+| 제목 3줄 | 높이 / line-height | Action Title 2줄 초과 = 하드 실패 |
+| 차트 정크 | box-shadow / gradient | 3D·그림자·그라디언트 금지 |
+
+**실패 시 대응 — 자동으로 폰트를 줄이지 않는다.**
+```
+삭제 → 분할 → 부록 → 열/등급 → 폰트(1단계) → 실패
+```
+(→ [`density-rules.md` §5`](density-rules.md) 결정 트리)
+
+> **puppeteer 없으면** `puppeteer-core` + 시스템 Chrome 으로 자동 폴백한다.
+> 실행: `NODE_PATH=<puppeteer-core 있는 node_modules> node tools/slide_lint.js <deck.html>`
 
 ---
 
