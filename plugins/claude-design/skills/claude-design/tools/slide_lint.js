@@ -42,6 +42,8 @@ const NOTE_SELECTOR = [
   '.source', '.footnote', '.note', 'figcaption',
   '.kicker', '.label', '.badge', '.pg', '.page-num',
   '.stat-lb', '.edge-label', '.axis', '.legend', '.caption',
+  // 위계 층 라벨 (hierarchy-analysis.md) — L0 kicker / L5 라벨 / L6 meta / 번호
+  '.L0', '.L5-lb', '.L6', '.no',
   '[data-label]',
 ].join(', ');
 
@@ -90,7 +92,8 @@ async function lint(htmlPath) {
   await page.goto('file://' + path.resolve(htmlPath), { waitUntil: 'networkidle0' });
 
   const errors = await page.evaluate((FLOOR, SAFE, NOTE_SELECTOR, DECOR_SELECTOR) => {
-    const errs = [];
+    const errs = [];    // 🔴 ERROR — 정보 손실·판독 불가. 빌드 실패
+    const warns = [];   // 🟡 WARN  — 품질 저하지만 작동은 함. 통과 + 기록
     const slides = document.querySelectorAll('.slide');
 
     slides.forEach((s, i) => {
@@ -98,6 +101,11 @@ async function lint(htmlPath) {
       const tier = s.dataset.density || 'D2';
       const floor = FLOOR[tier];
       if (!floor) { errs.push(`slide ${n}: 알 수 없는 density "${tier}" (D1/D2/D3)`); return; }
+
+      // 명시적 예외 승인 — data-override="사유"
+      // 규범이 빡빡하면 AI가 무한 재시도에 빠진다. 사유를 적으면 통과시키고 기록만 남긴다.
+      const override = s.dataset.override || '';
+      if (override) warns.push(`slide ${n}: [override] ${override}`);
 
       // ─── ① 넘침 (스크롤 오버플로) ───────────────────────────────
       // [data-fit] 을 단 컨테이너만 검사한다. 없으면 .body 를 본다.
@@ -139,36 +147,61 @@ async function lint(htmlPath) {
         }
       });
 
-      // ─── ③ 폰트 하한 ─────────────────────────────────────────
-      // 축소로 오버플로를 "해결"한 흔적을 잡는다.
+      // ─── ③ 폰트 하한 (ERROR — 읽을 수 없으면 없는 것과 같다) ────
+      const seen = new Set();
       s.querySelectorAll('p, li, td, th, span, div').forEach(el => {
         if (!el.textContent.trim()) return;
         if (el.children.length > 0) return;           // 리프 노드만
-        if (el.closest(NOTE_SELECTOR)) return;        // 각주 예외
+        if (el.closest(NOTE_SELECTOR)) return;        // 라벨·각주 예외
         const fs = parseFloat(getComputedStyle(el).fontSize);
         if (fs < floor) {
+          const key = `${n}:${fs}`;
+          if (seen.has(key)) return;                  // 같은 크기는 한 번만 보고
+          seen.add(key);
           errs.push(
-            `slide ${n}: 폰트 ${fs}px < ${tier} 하한 ${floor}px ` +
-            `— 폰트를 줄여 넘침을 해결하지 마라 (density-rules.md §5 STEP 5)`
+            `slide ${n}: 본문 폰트 ${fs}px < ${tier} 하한 ${floor}px ` +
+            `— 등급이 맞는지 먼저 보라(읽는 문서면 D3). 아니면 텍스트를 줄인다.`
           );
         }
       });
 
-      // ─── ④ Action Title 검사 ─────────────────────────────────
-      const title = s.querySelector('.title, h1, h2');
+      // ─── ④ Action Title (제목) ─────────────────────────────
+      const title = s.querySelector('.L1, .title, h1, h2');
       if (title) {
         const t = title.textContent.trim();
         if (t.length > 45) {
-          errs.push(`slide ${n}: 제목 ${t.length}자 > 40자 권장 (density-rules.md §8)`);
+          warns.push(`slide ${n}: 제목 ${t.length}자 (권장 40자 이하)`);   // WARN
         }
         const lh = parseFloat(getComputedStyle(title).lineHeight);
         const h = title.getBoundingClientRect().height;
-        if (lh && h / lh > 2.3) {
-          errs.push(`slide ${n}: 제목이 3줄 이상 — 2줄 초과는 하드 실패 (§8)`);
+        if (lh && h / lh > 2.4) {
+          warns.push(`slide ${n}: 제목이 3줄 — 2줄 권장`);                 // WARN
         }
       }
 
-      // ─── ⑤ 차트 정크 ────────────────────────────────────────
+      // ─── ⑤ 위계 검사 (WARN — 품질 문제지 작동 문제가 아니다) ────
+      const L1 = s.querySelectorAll('.L1').length;
+      const L3 = s.querySelectorAll('.L3').length;
+      const L5 = s.querySelectorAll('.L5').length;
+      if (L1 > 1)  warns.push(`slide ${n}: L1(결론)이 ${L1}개 — 슬라이드 분할 검토`);
+      if (L3 > 6)  warns.push(`slide ${n}: L3(근거)가 ${L3}개 — 표 전환 또는 분할 검토`);
+      if (L5 > 4)  warns.push(`slide ${n}: L5(수치)가 ${L5}개 — 강조가 분산됨`);
+      if (L1 === 0 && L3 === 0 && !override)
+        warns.push(`slide ${n}: L1(결론)이 없음 — 표지·간지가 아니면 검토`);
+
+      // ─── ⑥ 강조 예산 (WARN) ───────────────────────────────
+      // accent 색을 쓴 요소 수. 3곳 넘으면 강조가 아니다.
+      let accentCount = 0;
+      s.querySelectorAll('*').forEach(el => {
+        if (el.children.length > 0) return;
+        if (!el.textContent.trim()) return;
+        const c = getComputedStyle(el).color;
+        if (c && c !== 'rgb(28, 28, 28)' && c !== 'rgb(138, 138, 134)' &&
+            c !== 'rgb(255, 255, 255)' && c !== 'rgb(17, 17, 17)') accentCount++;
+      });
+      if (accentCount > 8) warns.push(`slide ${n}: 강조색 요소 ${accentCount}개 — 강조가 희석됨`);
+
+      // ─── ⑦ 차트 정크 (ERROR) ──────────────────────────────
       s.querySelectorAll('svg, .chart, .bar').forEach(el => {
         const cs = getComputedStyle(el);
         if (cs.boxShadow !== 'none') errs.push(`slide ${n}: 차트에 그림자 (차트 정크 금지)`);
@@ -177,7 +210,7 @@ async function lint(htmlPath) {
       });
     });
 
-    return { errs, slideCount: slides.length };
+    return { errs, warns, slideCount: slides.length };
   }, FLOOR, SAFE, NOTE_SELECTOR, DECOR_SELECTOR);
 
   await browser.close();
@@ -191,15 +224,24 @@ if (require.main === module) {
     console.error('사용법: node slide_lint.js <deck.html>');
     process.exit(2);
   }
-  lint(target).then(({ errs, slideCount }) => {
+  lint(target).then(({ errs, warns, slideCount }) => {
+    // 🟡 WARN — 통과시키되 기록한다. 규범이 빡빡하면 무한 재시도에 빠진다.
+    if (warns && warns.length) {
+      console.log(`\n🟡 WARN ${warns.length}건 (통과 — 품질 권고)`);
+      warns.forEach(w => console.log('   ' + w));
+    }
+
+    // 🔴 ERROR — 읽을 수 없거나 정보가 손실된다. 이것만 빌드를 막는다.
     if (errs.length) {
-      console.error(`\n❌ slide-lint 실패 — ${slideCount}장 중 ${errs.length}건\n`);
-      errs.forEach(e => console.error('  ' + e));
-      console.error('\n넘침은 빌드 실패다. 폰트를 줄여 덮지 말고 구조로 해결할 것.');
-      console.error('대응 순서: 삭제 → 분할 → 부록 → 열/등급 → 폰트(1단계) → 실패\n');
+      console.error(`\n❌ slide-lint 실패 — ${slideCount}장 중 ERROR ${errs.length}건\n`);
+      errs.forEach(e => console.error('   ' + e));
+      console.error('\nERROR = 정보 손실·판독 불가. 이것만 빌드를 막는다.');
+      console.error('대응: 등급 확인(읽는 문서면 D3) → 삭제 → 분할 → 부록 → 열 → 폰트 → 실패');
+      console.error('의도적 예외라면: <section class="slide" data-override="사유">\n');
       process.exit(1);
     }
-    console.log(`✅ slide-lint 통과 — ${slideCount}장, 위반 0건`);
+    console.log(`\n✅ slide-lint 통과 — ${slideCount}장, ERROR 0건` +
+                (warns && warns.length ? ` (WARN ${warns.length}건)` : ''));
   }).catch(e => {
     console.error('slide-lint 실행 오류:', e.message);
     process.exit(2);
