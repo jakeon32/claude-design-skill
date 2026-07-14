@@ -32,12 +32,15 @@ description: "Claude Design QA 파이프라인 — 슬라이드 생성 후 자�
   → 실패하면 스크린샷 찍지 말고 여기서 멈춘다 (사람 눈보다 기계가 먼저)
         ↓
 [2. 스크린샷]
-  Chrome DevTools → 각 슬라이드 스크린샷
-  (mcp__chrome-devtools__take_screenshot 또는 capture_compare.py)
+  Chrome DevTools / puppeteer → 각 슬라이드 PNG
         ↓
 [3. 코드 분석 QA]           ← visual-refiner 1단계
   HTML 파일 직접 파싱
   → 타이포 스케일, 스페이싱, 금지 폰트, PPTX 제약 등
+        ↓
+[3.7 ★ codex 시각 검수]     ← 2026-07-14 신설. 제3자 눈.
+  codex exec -i slide.png -- "시니어 디자이너 관점에서 시각 검수하라 …"
+  → Claude가 놓치는 시각 문제를 잡는다 (실측: 8건 중 3건을 Claude가 못 봤음)
         ↓
 [4. 시각 검사 QA]            ← visual-refiner 2단계
   스크린샷 이미지를 Claude가 직접 보고 판단
@@ -86,6 +89,34 @@ node plugins/claude-design/skills/claude-design/tools/slide_lint.js d:/tmp/slide
 
 > **puppeteer 없으면** `puppeteer-core` + 시스템 Chrome 으로 자동 폴백한다.
 > 실행: `NODE_PATH=<puppeteer-core 있는 node_modules> node tools/slide_lint.js <deck.html>`
+
+---
+
+## 🔴 3.7 단계 — codex 시각 검수 (제3자 눈)
+
+**기계는 수치를, codex는 시각을, 사람은 맥락을 본다.**
+
+```bash
+codex exec --skip-git-repo-check -i slide-01.png -- \
+  "이 1280x720 슬라이드를 시니어 디자이너 관점에서 시각 검수하라.
+   여백 균형, 시각 위계, 그룹핑, 정렬, 타이포, 강조 분산을 본다.
+   칭찬 말고 고칠 것만 우선순위 순으로. 각 항목 (무엇/왜/어떻게) 한 줄씩. 한국어."
+```
+
+**왜 필요한가 — 실측 결과 (2026-07-14)**
+검증 덱 슬라이드 1장에 대해 codex가 8건을 지적했고, **그중 3건은 Claude가 전혀 못 봤다**:
+- 우측 결론 블록이 리스트와 너무 멀어 관계가 약해 보임
+- 제목이 한 줄로 과도하게 퍼져 하단 콘텐츠보다 시각 무게가 압도적
+- **문장 끝 "것이다."가 한 줄로 고립돼 의도치 않은 강조가 됨**
+
+**주의: codex도 100%는 아니다.**
+같은 검수에서 "제목에 파란 그림자가 있다"고 했는데 그림자는 없었다.
+**그대로 받아들이지 말고 검증할 것.** 지적을 코드로 확인한 뒤 반영한다.
+
+**운영 규칙**
+- 이미지는 **1장씩** 보낸다 (4장 동시 전달 시 7분 타임아웃 발생)
+- 타임아웃 280초 권장
+- **칭찬 금지·우선순위 요구**를 프롬프트에 명시해야 실용적인 답이 나온다
 
 ---
 
