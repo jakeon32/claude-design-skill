@@ -184,9 +184,13 @@ description: "슬라이드 표(Table) 레이아웃 HTML 템플릿 — 비교표,
 
 ```css
 /* ============ Slide Table Tokens (1280×720) ============ */
+/* ⚠️ 머리글도 밀도 하한(D2 24px)을 지킨다.
+   초안에서 22px로 잡았다가 slide-lint 가 규범 충돌을 잡아냈다 —
+   머리글은 라벨이지만 여전히 "읽어야 하는 텍스트"다. 각주가 아니다.
+   본문과의 위계는 크기가 아니라 색(muted) + weight(600)로 만든다. */
 :root{
   --tbl-font:        26px;    /* 본문. 하한 24px */
-  --tbl-head-font:   22px;
+  --tbl-head-font:   24px;    /* = D2 하한. 이 밑으로 내리지 말 것 */
   --tbl-row-h:       56px;    /* ≈ 2 × font */
   --tbl-pad-x:       20px;    /* ≈ 0.75em */
   --tbl-pad-y:       14px;
