@@ -20,7 +20,7 @@ const pptr = require('puppeteer-core');
   await p.setContent('<html><body></body></html>');
 
   const out = await p.evaluate(() => {
-    const FONT = "'Noto Sans CJK KR',sans-serif";
+    const FONT = "'Pretendard',sans-serif";
     const cv = document.createElement('canvas');
 
     function measure(text, px, weight) {
@@ -96,12 +96,21 @@ const pptr = require('puppeteer-core');
     }
 
     const WEIGHTS = [400, 500, 600, 700, 800, 900];
+    // 한글은 복잡도 편차가 크다. 상한은 "최악의 글자" 기준으로 잡아야 안전하다.
+    //   단순 = 무받침·홑받침 (가·나·이·수)
+    //   보통 = 일반 받침    (격·은·코·드)
+    //   복잡 = 겹받침·복모음 (뚫·짧·옳·쫓·웠·훑·흙)
     const CASES = [
-      { label: '한글 44px', text: '규격은 코드에', px: 44 },
-      { label: '한글 24px', text: '검증된 역량 확인', px: 24 },
-      { label: '한글 19px', text: '규모가 아닌 기술력', px: 19 },
-      { label: '영문 44px', text: 'BRAND VISION', px: 44 },
-      { label: '영문 19px', text: 'Verified Capability', px: 19 },
+      { label: '한글 단순 44', text: '이 수가 나아', px: 44 },
+      { label: '한글 보통 44', text: '규격은 코드에', px: 44 },
+      { label: '한글 복잡 44', text: '뚫렸던 확률', px: 44 },
+      { label: '한글 극단 44', text: '훑짧옳쫓뚫', px: 44 },
+      { label: '한글 단순 19', text: '이 수가 나아', px: 19 },
+      { label: '한글 보통 19', text: '규모가 아닌 기술력', px: 19 },
+      { label: '한글 복잡 19', text: '뚫렸던 확률과 넓혔다', px: 19 },
+      { label: '한글 극단 19', text: '훑짧옳쫓뚫', px: 19 },
+      { label: '영문 44px',   text: 'BRAND VISION', px: 44 },
+      { label: '영문 19px',   text: 'Verified Capability', px: 19 },
     ];
 
     return CASES.map(c => ({
