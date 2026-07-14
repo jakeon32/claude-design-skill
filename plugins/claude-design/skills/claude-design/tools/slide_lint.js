@@ -29,8 +29,30 @@ const FLOOR = { D1: 32, D2: 24, D3: 16 };
  *  hardBottom(704) = 캔버스 절대 경계 — 무엇도 이걸 넘으면 잘린다. */
 const SAFE = { top: 40, right: 1216, bottom: 680, left: 64, hardBottom: 704 };
 
-/** 각주·출처는 하한 예외 (본문이 아니므로) */
-const NOTE_SELECTOR = '.source, .footnote, .note, figcaption';
+/**
+ * 폰트 하한 예외 — "본문"이 아닌 것들.
+ * 각주·출처뿐 아니라 **디자인 요소**(kicker·mono 라벨·배지·페이지 번호·축 라벨)도 포함한다.
+ *
+ * 🔴 2026-07-14 교훈: 초판 린터는 이걸 빼먹어서 mono kicker(13px)·stat 라벨을
+ * 전부 "하한 위반"으로 잡았다. **가드레일이 디자인을 막았다.**
+ * 하한의 목적은 "읽어야 할 본문이 작아지는 것"을 막는 것이지,
+ * 라벨·캡션 같은 보조 타이포를 금지하는 게 아니다.
+ */
+const NOTE_SELECTOR = [
+  '.source', '.footnote', '.note', 'figcaption',
+  '.kicker', '.label', '.badge', '.pg', '.page-num',
+  '.stat-lb', '.edge-label', '.axis', '.legend', '.caption',
+  '[data-label]',
+].join(', ');
+
+/**
+ * 안전영역 검사 예외 — 의도적 full-bleed 장식 레이어.
+ * 배경 그리드·수직 가이드·풀블리드 이미지는 캔버스를 덮는 것이 정상이다.
+ */
+const DECOR_SELECTOR = [
+  '.grid-bg', '.guides', '.bleed', '.bg-layer', '.decor',
+  '[data-decor]', '[data-bleed]',
+].join(', ');
 
 /** 시스템 Chrome 후보 (puppeteer-core 사용 시 executablePath 필수) */
 const CHROME_PATHS = [
@@ -67,7 +89,7 @@ async function lint(htmlPath) {
   await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
   await page.goto('file://' + path.resolve(htmlPath), { waitUntil: 'networkidle0' });
 
-  const errors = await page.evaluate((FLOOR, SAFE, NOTE_SELECTOR) => {
+  const errors = await page.evaluate((FLOOR, SAFE, NOTE_SELECTOR, DECOR_SELECTOR) => {
     const errs = [];
     const slides = document.querySelectorAll('.slide');
 
@@ -98,6 +120,7 @@ async function lint(htmlPath) {
       // 대신 캔버스 절대 경계(SAFE.hardBottom)만 확인한다.
       const sb = s.getBoundingClientRect();
       s.querySelectorAll('*').forEach(el => {
+        if (el.closest(DECOR_SELECTOR)) return;    // full-bleed 장식은 검사 제외
         const r = el.getBoundingClientRect();
         if (!r.width || !r.height) return;
         const x1 = r.left - sb.left, y1 = r.top - sb.top;
@@ -155,7 +178,7 @@ async function lint(htmlPath) {
     });
 
     return { errs, slideCount: slides.length };
-  }, FLOOR, SAFE, NOTE_SELECTOR);
+  }, FLOOR, SAFE, NOTE_SELECTOR, DECOR_SELECTOR);
 
   await browser.close();
   return errors;
